@@ -14,12 +14,14 @@ export function ModelsPage() {
   const api = modelsApi(getAccessToken());
 
   const [searchJson, setSearchJson] = React.useState<string>("{\n  \n}");
-  const [searchResults, setSearchResults] = React.useState<ModelResourceList[] | null>(null);
+  const [searchResults, setSearchResults] = React.useState<
+    ModelResourceList[] | null
+  >(null);
   const [searchError, setSearchError] = React.useState<string | null>(null);
 
   const listQ = useQuery({
     queryKey: ["models", "list"],
-    queryFn: api.list
+    queryFn: api.list,
   });
 
   const runSearch = async () => {
@@ -44,7 +46,10 @@ export function ModelsPage() {
       <Card
         title={t("models:title")}
         actions={
-          <button onClick={() => listQ.refetch()} style={{ padding: "8px 10px", borderRadius: 8 }}>
+          <button
+            onClick={() => listQ.refetch()}
+            style={{ padding: "8px 10px", borderRadius: 8 }}
+          >
             {t("common:actions.refresh")}
           </button>
         }
@@ -52,19 +57,23 @@ export function ModelsPage() {
         {listQ.isLoading && <div>Loading…</div>}
         {listQ.error && <div>{toUserMessage(listQ.error, t)}</div>}
 
-        {!listQ.isLoading && !listQ.error && (listQ.data?.length ?? 0) === 0 && (
-          <div style={{ opacity: 0.85 }}>{t("models:list.empty")}</div>
-        )}
+        {!listQ.isLoading &&
+          !listQ.error &&
+          (listQ.data?.length ?? 0) === 0 && (
+            <div style={{ opacity: 0.85 }}>{t("models:list.empty")}</div>
+          )}
 
         {!listQ.isLoading && !listQ.error && (listQ.data?.length ?? 0) > 0 && (
           <ul style={{ paddingLeft: 18, margin: 0 }}>
             {listQ.data!.map((m) => (
               <li key={`${m.modelName}:${m.fingerprint}`}>
                 <Link
-                  to={`/models/${encodeURIComponent(m.modelName)}/${encodeURIComponent(m.fingerprint)}`}
+                  to={`/models/${encodeURIComponent(
+                    m.model
+                  )}/${encodeURIComponent(m.fingerprint)}`}
                   style={{ color: "#9ad1ff" }}
                 >
-                  {m.modelName} / {m.fingerprint}
+                  {m.model} / {m.fingerprint}
                 </Link>
               </li>
             ))}
@@ -76,10 +85,16 @@ export function ModelsPage() {
         title={t("models:search.title")}
         actions={
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={runSearch} style={{ padding: "8px 10px", borderRadius: 8 }}>
+            <button
+              onClick={runSearch}
+              style={{ padding: "8px 10px", borderRadius: 8 }}
+            >
               {t("models:search.submit")}
             </button>
-            <button onClick={resetSearch} style={{ padding: "8px 10px", borderRadius: 8 }}>
+            <button
+              onClick={resetSearch}
+              style={{ padding: "8px 10px", borderRadius: 8 }}
+            >
               {t("models:search.reset")}
             </button>
           </div>
@@ -92,7 +107,9 @@ export function ModelsPage() {
           rows={8}
           style={{ width: "100%", borderRadius: 12, padding: 12 }}
         />
-        {searchError && <div style={{ marginTop: 8, color: "#ffb4b4" }}>{searchError}</div>}
+        {searchError && (
+          <div style={{ marginTop: 8, color: "#ffb4b4" }}>{searchError}</div>
+        )}
 
         {searchResults && (
           <div style={{ marginTop: 12 }}>

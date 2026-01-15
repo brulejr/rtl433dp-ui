@@ -3,12 +3,15 @@
  * The unwrap() function is the single place where you map wrapper -> payload.
  */
 export type ResourceWrapper<T> = {
-  data?: T;
-  errors?: unknown;
-  meta?: Record<string, unknown>;
+  content: T;
+  status: number;
+  timestamp: string;
+  messages?: unknown[];
 };
 
 export function unwrap<T>(w: ResourceWrapper<T>): T {
-  if (w?.data === undefined) throw new Error("Response wrapper did not include 'data'.");
-  return w.data;
+  if (w?.content === undefined) {
+    throw new Error("Response wrapper did not include 'content'.");
+  }
+  return w.content;
 }

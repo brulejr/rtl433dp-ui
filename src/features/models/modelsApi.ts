@@ -5,14 +5,14 @@ export type ModelKey = { modelName: string; fingerprint: string };
 
 // TODO: Replace these with your exact ModelResource shapes.
 export type ModelResourceList = {
-  modelName: string;
+  model: string;          // <-- was modelName
   fingerprint: string;
-  // any additional list fields (JsonView.List)
+  source?: string;
+  category?: string;
   [k: string]: unknown;
 };
 
 export type ModelResourceDetails = ModelResourceList & {
-  // any additional details fields (JsonView.Details)
   sensors?: unknown;
 };
 
