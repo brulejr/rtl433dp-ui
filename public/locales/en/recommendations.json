@@ -1,0 +1,13 @@
+{
+  "title": "Recommendations",
+  "list": {
+    "empty": "No recommendation candidates found."
+  },
+  "promote": {
+    "title": "Promote recommendation",
+    "name": "Name",
+    "area": "Area",
+    "deviceType": "Device type",
+    "submit": "Promote"
+  }
+}

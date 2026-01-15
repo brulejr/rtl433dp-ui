@@ -1,0 +1,20 @@
+{
+  "title": "Models",
+  "list": {
+    "empty": "No models found."
+  },
+  "search": {
+    "title": "Search",
+    "hint": "Provide JSON body for Rtl433Search (advanced).",
+    "submit": "Search",
+    "reset": "Reset"
+  },
+  "details": {
+    "title": "Model details",
+    "updateSensors": "Update sensors"
+  },
+  "fields": {
+    "modelName": "Model",
+    "fingerprint": "Fingerprint"
+  }
+}

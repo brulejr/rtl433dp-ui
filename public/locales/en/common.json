@@ -1,0 +1,27 @@
+{
+  "appTitle": "RTL433 Data Pipeline Console",
+  "nav": {
+    "profile": "Profile",
+    "models": "Models",
+    "recommendations": "Recommendations",
+    "knownDevices": "Known Devices"
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "signingIn": "Signing you in\u2026"
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "save": "Save",
+    "cancel": "Cancel",
+    "promote": "Promote"
+  },
+  "errors": {
+    "generic": "Something went wrong.",
+    "unauthorized": "You are not authorized to perform this action."
+  },
+  "labels": {
+    "language": "Language"
+  }
+}

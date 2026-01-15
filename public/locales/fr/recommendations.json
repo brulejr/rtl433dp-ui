@@ -1,0 +1,13 @@
+{
+  "title": "Recommandations",
+  "list": {
+    "empty": "Aucune recommandation trouvée."
+  },
+  "promote": {
+    "title": "Promouvoir une recommandation",
+    "name": "Nom",
+    "area": "Zone",
+    "deviceType": "Type d'appareil",
+    "submit": "Promouvoir"
+  }
+}

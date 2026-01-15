@@ -1,0 +1,27 @@
+{
+  "appTitle": "Console RTL433",
+  "nav": {
+    "profile": "Profil",
+    "models": "Modèles",
+    "recommendations": "Recommandations",
+    "knownDevices": "Appareils connus"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "logout": "Se déconnecter",
+    "signingIn": "Connexion…"
+  },
+  "actions": {
+    "refresh": "Rafraîchir",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "promote": "Promouvoir"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite.",
+    "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action."
+  },
+  "labels": {
+    "language": "Langue"
+  }
+}

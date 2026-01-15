@@ -1,0 +1,20 @@
+{
+  "title": "Modèles",
+  "list": {
+    "empty": "Aucun modèle trouvé."
+  },
+  "search": {
+    "title": "Recherche",
+    "hint": "Fournissez le JSON pour Rtl433Search (avancé).",
+    "submit": "Rechercher",
+    "reset": "Réinitialiser"
+  },
+  "details": {
+    "title": "Détails du modèle",
+    "updateSensors": "Mettre à jour les capteurs"
+  },
+  "fields": {
+    "modelName": "Modèle",
+    "fingerprint": "Empreinte"
+  }
+}
