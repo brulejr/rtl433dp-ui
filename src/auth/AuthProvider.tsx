@@ -1,16 +1,19 @@
 import React from "react";
 import type { User } from "oidc-client-ts";
 import { userManager } from "./oidc";
+import { getPermissionsFromAccessToken } from "./permissions";
 
 type AuthState = {
   user: User | null;
   isLoading: boolean;
+  permissions: string[];
 };
 
 type AuthContextValue = AuthState & {
   login: () => Promise<void>;
   logout: () => Promise<void>;
   getAccessToken: () => string | null;
+  hasPermission: (perm: string) => boolean;
 };
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(
@@ -43,20 +46,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const permissions = React.useMemo(
+    () => getPermissionsFromAccessToken(user?.access_token),
+    [user?.access_token]
+  );
+
   const value: AuthContextValue = {
     user,
     isLoading,
+    permissions,
+
     login: async () => {
-      try {
-        await userManager.signinRedirect();
-      } catch (e) {
-        console.error(e);
-      }
+      // don't swallow errors; rethrow so UI can show a toast if desired
+      await userManager.signinRedirect();
     },
+
     logout: async () => {
       await userManager.signoutRedirect();
     },
+
     getAccessToken: () => (user?.access_token ? user.access_token : null),
+
+    hasPermission: (perm: string) => permissions.includes(perm),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
