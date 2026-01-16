@@ -36,13 +36,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const onUserLoaded = (u: User) => setUser(u && !u.expired ? u : null);
     const onUserUnloaded = () => setUser(null);
 
+    const onSilentRenewError = (err?: unknown) => {
+      console.error("Silent renew failed; logging out.", err);
+
+      // Immediately reflect logged-out state in UI
+      setUser(null);
+
+      // Clear stored OIDC user from sessionStorage
+      userManager.removeUser().catch(console.error);
+
+      // Optional: also end the Keycloak session (redirects away)
+      userManager.signoutRedirect().catch(console.error);
+    };
+
     userManager.events.addUserLoaded(onUserLoaded);
     userManager.events.addUserUnloaded(onUserUnloaded);
+    userManager.events.addSilentRenewError(onSilentRenewError);
 
     return () => {
       mounted = false;
       userManager.events.removeUserLoaded(onUserLoaded);
       userManager.events.removeUserUnloaded(onUserUnloaded);
+      userManager.events.removeSilentRenewError(onSilentRenewError);
     };
   }, []);
 
@@ -57,7 +72,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     permissions,
 
     login: async () => {
-      // don't swallow errors; rethrow so UI can show a toast if desired
       await userManager.signinRedirect();
     },
 
