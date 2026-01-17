@@ -1,38 +1,69 @@
 import { baseApi } from "../../services/api/baseApi";
 
-export type Recommendation = {
-  // match backend
-  id: string;
-  model: string;
-  deviceId: string;
-  weight?: number;
+export type ApiEnvelope<T> = {
+  content: T;
+  status: number;
+  timestamp: string;
+  messages: string[];
 };
 
-export type PromoteRequest = {
-  // match backend promote payload
-  recommendationId: string;
-  type: string;
-  area: string;
+export type RecommendationCandidate = {
+  source?: string;
+
+  // identity-ish
+  model?: string;
+  id?: string | number;
+  deviceId?: string | number; // some backends use deviceId (like known-devices)
+  fingerprint?: string;
+
+  // confidence-ish
+  weight?: number;
+  frequency?: number;
+  rssi?: number;
+
+  // misc
+  promoted?: boolean;
+  time?: string;
+  lastSeen?: string;
+};
+
+export type PromoteRecommendationRequest = {
+  // these must match what your backend expects
+  model: string;
+  deviceId: string | number; // prefer deviceId to align with known-devices response
+
   name: string;
+  area: string;
+  deviceType: string;
+
+  fingerprint?: string;
 };
 
 export const recommendationsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    listRecommendations: build.query<Recommendation[], void>({
-      query: () => "/api/v1/recommendations",
-      providesTags: ["Recommendations"],
+    listRecommendations: build.query<ApiEnvelope<RecommendationCandidate[]>, void>({
+      query: () => ({
+        // IMPORTANT: baseApi already includes "/api"
+        url: "/v1/recommendations",
+        method: "GET",
+      }),
+      providesTags: () => [{ type: "Recommendations", id: "LIST" }],
     }),
 
-    promoteRecommendation: build.mutation<void, PromoteRequest>({
+    promoteRecommendation: build.mutation<ApiEnvelope<unknown>, PromoteRecommendationRequest>({
       query: (body) => ({
-        url: "/api/v1/recommendations/promote",
+        // IMPORTANT: baseApi already includes "/api"
+        url: "/v1/recommendations/promote",
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Recommendations", "KnownDevices"],
+      invalidatesTags: () => [{ type: "Recommendations", id: "LIST" }],
     }),
   }),
+  overrideExisting: false,
 });
 
-export const { useListRecommendationsQuery, usePromoteRecommendationMutation } =
-  recommendationsApi;
+export const {
+  useListRecommendationsQuery,
+  usePromoteRecommendationMutation,
+} = recommendationsApi;
