@@ -6,6 +6,8 @@ import settingsReducer from "../features/settings/settingsSlice";
 import sessionReducer from "../features/session/sessionSlice";
 import toastsReducer from "../features/toasts/toastsSlice";
 
+import knownDevicesReducer from "../features/knownDevices/knownDevicesSlice";
+
 import { baseApi } from "../services/api/baseApi";
 
 export const store = configureStore({
@@ -15,6 +17,9 @@ export const store = configureStore({
     settings: settingsReducer,
     session: sessionReducer,
     toasts: toastsReducer,
+
+    // feature slices
+    knownDevices: knownDevicesReducer,
 
     // RTK Query
     [baseApi.reducerPath]: baseApi.reducer,
