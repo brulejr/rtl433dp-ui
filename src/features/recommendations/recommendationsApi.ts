@@ -1,50 +1,38 @@
-import { apiFetch } from "../../api/http";
-import { unwrap, type ResourceWrapper } from "../../api/resourceWrapper";
+import { baseApi } from "../../services/api/baseApi";
 
-// TODO: Replace with exact RecommendationResource fields.
-export type RecommendationResource = {
-  // Typical fields in rtl433 pipeline
-  model?: string;
-  id?: string;
-  fingerprint?: string;
-  weight?: number;
-  rssi?: number;
-  frequency?: number;
-  [k: string]: unknown;
-};
-
-// TODO: Match your PromotionRequest DTO exactly.
-export type PromotionRequest = {
-  // include whatever your backend expects (this is a placeholder)
+export type Recommendation = {
+  // match backend
+  id: string;
   model: string;
-  id: string;
-  name: string;
-  area: string;
-  deviceType: string;
+  deviceId: string;
+  weight?: number;
 };
 
-export type KnownDeviceResource = {
-  id: string;
-  name: string;
+export type PromoteRequest = {
+  // match backend promote payload
+  recommendationId: string;
+  type: string;
   area: string;
-  deviceType: string;
-  [k: string]: unknown;
+  name: string;
 };
 
-export function recommendationsApi(token: string | null) {
-  return {
-    listCandidates: async () => {
-      const w = await apiFetch<ResourceWrapper<RecommendationResource[]>>(`/api/v1/recommendations`, {}, token);
-      return unwrap(w);
-    },
+export const recommendationsApi = baseApi.injectEndpoints({
+  endpoints: (build) => ({
+    listRecommendations: build.query<Recommendation[], void>({
+      query: () => "/api/v1/recommendations",
+      providesTags: ["Recommendations"],
+    }),
 
-    promote: async (req: PromotionRequest) => {
-      const w = await apiFetch<ResourceWrapper<KnownDeviceResource>>(
-        `/api/v1/recommendations/promote`,
-        { method: "POST", body: JSON.stringify(req) },
-        token
-      );
-      return unwrap(w);
-    }
-  };
-}
+    promoteRecommendation: build.mutation<void, PromoteRequest>({
+      query: (body) => ({
+        url: "/api/v1/recommendations/promote",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Recommendations", "KnownDevices"],
+    }),
+  }),
+});
+
+export const { useListRecommendationsQuery, usePromoteRecommendationMutation } =
+  recommendationsApi;

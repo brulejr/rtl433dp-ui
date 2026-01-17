@@ -5,7 +5,7 @@ import { AppShell } from "../components/Layout";
 
 import { LoginPage } from "../features/profile/LoginPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
-import { ModelsPage } from "../features/models/ModelsPage";
+import ModelsPage from "../features/models/ModelsPage";
 import { ModelDetailsPage } from "../features/models/ModelDetailsPage";
 import { RecommendationsPage } from "../features/recommendations/RecommendationsPage";
 import { KnownDevicesPage } from "../features/knownEntities/KnownDevicesPage";
@@ -22,11 +22,14 @@ export const router = createBrowserRouter([
         children: [
           { path: "/", element: <ProfilePage /> },
           { path: "/models", element: <ModelsPage /> },
-          { path: "/models/:modelName/:fingerprint", element: <ModelDetailsPage /> },
+          {
+            path: "/models/:modelName/:fingerprint",
+            element: <ModelDetailsPage />,
+          },
           { path: "/recommendations", element: <RecommendationsPage /> },
-          { path: "/known-devices", element: <KnownDevicesPage /> }
-        ]
-      }
-    ]
-  }
+          { path: "/known-devices", element: <KnownDevicesPage /> },
+        ],
+      },
+    ],
+  },
 ]);

@@ -1,20 +1,19 @@
-import { apiFetch } from "../../api/http";
-import { unwrap, type ResourceWrapper } from "../../api/resourceWrapper";
+import { baseApi } from "../../services/api/baseApi";
 
-// TODO: Replace with exact KnownDeviceResource fields.
-export type KnownDeviceResource = {
+export type KnownDevice = {
   id: string;
-  name?: string;
-  area?: string;
-  deviceType?: string;
-  [k: string]: unknown;
+  name: string;
+  type: string;
+  area: string;
 };
 
-export function knownDevicesApi(token: string | null) {
-  return {
-    listAll: async () => {
-      const w = await apiFetch<ResourceWrapper<KnownDeviceResource[]>>(`/api/v1/known-devices`, {}, token);
-      return unwrap(w);
-    }
-  };
-}
+export const knownDevicesApi = baseApi.injectEndpoints({
+  endpoints: (build) => ({
+    listKnownDevices: build.query<KnownDevice[], void>({
+      query: () => "/api/v1/known-devices",
+      providesTags: ["KnownDevices"],
+    }),
+  }),
+});
+
+export const { useListKnownDevicesQuery } = knownDevicesApi;

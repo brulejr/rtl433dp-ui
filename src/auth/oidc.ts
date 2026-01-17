@@ -20,22 +20,38 @@ const settings: UserManagerSettings = {
 
   userStore: new WebStorageStateStore({ store: window.sessionStorage }),
 
-  // 🔑 token lifecycle
+  // token lifecycle
   automaticSilentRenew: true,
-
-  // Optional but nice: logs user out if Keycloak session ends elsewhere
   monitorSession: true,
-
-  // Optional: reduce "token expired" race (seconds before expiry)
   accessTokenExpiringNotificationTime: 30,
 };
 
 export const userManager = new UserManager(settings);
 
+/**
+ * Optional integration hook so the UI layer (AuthProvider/Redux) can react
+ * to unrecoverable auth failures before we redirect.
+ */
+export type HardLogoutListener = (reason: string, err?: unknown) => void | Promise<void>;
+
+let hardLogoutListener: HardLogoutListener | null = null;
+
+export function setHardLogoutListener(listener: HardLogoutListener | null) {
+  hardLogoutListener = listener;
+}
+
 // --- Auto-logout mechanics ---
 // centralizes "hard logout" for any unrecoverable auth failure
 async function hardLogout(reason: string, err?: unknown) {
   console.warn(`[auth] ${reason}`, err);
+
+  // Let the UI clear state (React + Redux) before we redirect away.
+  try {
+    await hardLogoutListener?.(reason, err);
+  } catch (listenerErr) {
+    console.warn("[auth] hardLogoutListener failed", listenerErr);
+  }
+
   try {
     await userManager.removeUser();
   } finally {
