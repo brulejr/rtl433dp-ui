@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
@@ -14,6 +14,7 @@ import {
   selectSelectedCandidate,
   setPromoteField,
 } from "./recommendationsSlice";
+import { hasPermission } from "../../auth/permissions";
 
 function safeString(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -21,7 +22,6 @@ function safeString(v: unknown): string {
 }
 
 function candidateKey(c: RecommendationCandidate, idx: number): string {
-  // prefer stable identity if present
   const model = safeString(c.model);
   const id = safeString(c.id);
   const fp = safeString(c.fingerprint);
@@ -37,6 +37,10 @@ export function RecommendationsPage() {
   const selected = useAppSelector(selectSelectedCandidate);
   const promoteForm = useAppSelector(selectPromoteForm);
 
+  // ✅ Option A: permission gate from redux session state
+  const permissions = useAppSelector((s) => s.session.permissions);
+  const canPromote = hasPermission(permissions, "recommendation:promote");
+
   const { data, isLoading, isFetching, isError, error, refetch } =
     useListRecommendationsQuery();
 
@@ -44,12 +48,26 @@ export function RecommendationsPage() {
 
   const rows = useMemo(() => data?.content ?? [], [data]);
 
-  const onOpenPromote = (c: RecommendationCandidate) =>
+  // ✅ Safety: if permissions change (or user logs out), force-close the modal
+  useEffect(() => {
+    if (promoteOpen && !canPromote) {
+      dispatch(closePromote());
+    }
+  }, [promoteOpen, canPromote, dispatch]);
+
+  const onOpenPromote = (c: RecommendationCandidate) => {
+    if (!canPromote) return; // ✅ hard guard
     dispatch(openPromote(c));
+  };
+
   const onClosePromote = () => dispatch(closePromote());
 
   const onSubmitPromote = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ extra guard (don’t attempt privileged action without permission)
+    if (!canPromote) return;
+
     if (!selected?.model || selected.id === undefined || selected.id === null)
       return;
 
@@ -146,7 +164,11 @@ export function RecommendationsPage() {
                 >
                   Frequency
                 </th>
-                <th style={{ borderBottom: "1px solid #ddd", padding: 8 }} />
+
+                {/* ✅ Only show the action column if user can promote */}
+                {canPromote && (
+                  <th style={{ borderBottom: "1px solid #ddd", padding: 8 }} />
+                )}
               </tr>
             </thead>
 
@@ -168,21 +190,27 @@ export function RecommendationsPage() {
                   <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
                     {c.frequency ?? ""}
                   </td>
-                  <td
-                    style={{
-                      padding: 8,
-                      borderBottom: "1px solid #f0f0f0",
-                      textAlign: "right",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onOpenPromote(c)}
-                      disabled={!c.model || c.id === undefined || c.id === null}
+
+                  {/* ✅ Only show Promote button if allowed */}
+                  {canPromote && (
+                    <td
+                      style={{
+                        padding: 8,
+                        borderBottom: "1px solid #f0f0f0",
+                        textAlign: "right",
+                      }}
                     >
-                      {t("common:actions.promote")}
-                    </button>
-                  </td>
+                      <button
+                        type="button"
+                        onClick={() => onOpenPromote(c)}
+                        disabled={
+                          !c.model || c.id === undefined || c.id === null
+                        }
+                      >
+                        {t("common:actions.promote")}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -190,8 +218,8 @@ export function RecommendationsPage() {
         </div>
       )}
 
-      {/* Promote dialog (simple inline modal) */}
-      {promoteOpen && selected && (
+      {/* ✅ Promote dialog only exists if canPromote */}
+      {canPromote && promoteOpen && selected && (
         <div
           role="dialog"
           aria-modal="true"
