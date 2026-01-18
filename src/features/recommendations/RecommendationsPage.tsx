@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
@@ -14,7 +14,10 @@ import {
   selectSelectedCandidate,
   setPromoteField,
 } from "./recommendationsSlice";
-import { hasPermission } from "../../auth/permissions";
+import { selectHasPermission } from "../session/sessionSelectors";
+import { PageHeader } from "../../components/PageHeader";
+import { ApiError } from "../../components/ApiError";
+import { DataTable, DataTableCell } from "../../components/DataTable";
 
 function safeString(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -37,9 +40,9 @@ export function RecommendationsPage() {
   const selected = useAppSelector(selectSelectedCandidate);
   const promoteForm = useAppSelector(selectPromoteForm);
 
-  // ✅ Option A: permission gate from redux session state
-  const permissions = useAppSelector((s) => s.session.permissions);
-  const canPromote = hasPermission(permissions, "recommendation:promote");
+  const canPromote = useAppSelector(
+    selectHasPermission("recommendation:promote")
+  );
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useListRecommendationsQuery();
@@ -48,15 +51,8 @@ export function RecommendationsPage() {
 
   const rows = useMemo(() => data?.content ?? [], [data]);
 
-  // ✅ Safety: if permissions change (or user logs out), force-close the modal
-  useEffect(() => {
-    if (promoteOpen && !canPromote) {
-      dispatch(closePromote());
-    }
-  }, [promoteOpen, canPromote, dispatch]);
-
   const onOpenPromote = (c: RecommendationCandidate) => {
-    if (!canPromote) return; // ✅ hard guard
+    if (!canPromote) return;
     dispatch(openPromote(c));
   };
 
@@ -64,10 +60,7 @@ export function RecommendationsPage() {
 
   const onSubmitPromote = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // ✅ extra guard (don’t attempt privileged action without permission)
     if (!canPromote) return;
-
     if (!selected?.model || selected.id === undefined || selected.id === null)
       return;
 
@@ -83,32 +76,32 @@ export function RecommendationsPage() {
     dispatch(closePromote());
   };
 
+  const columns = [
+    { key: "model", header: "Model" },
+    { key: "id", header: "ID" },
+    { key: "weight", header: "Weight" },
+    { key: "rssi", header: "RSSI" },
+    { key: "frequency", header: "Frequency" },
+    { key: "actions", header: "", align: "right" as const },
+  ];
+
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <h2 style={{ margin: 0 }}>{t("recommendations:title")}</h2>
+      <PageHeader
+        title={t("recommendations:title")}
+        loading={isLoading || isFetching}
+        actions={
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isLoading || isFetching}
+          >
+            {t("common:actions.refresh")}
+          </button>
+        }
+      />
 
-        <button
-          type="button"
-          onClick={() => refetch()}
-          disabled={isLoading || isFetching}
-        >
-          {t("common:actions.refresh")}
-        </button>
-
-        {(isLoading || isFetching) && (
-          <span style={{ opacity: 0.7 }}>Loading…</span>
-        )}
-      </div>
-
-      {isError && (
-        <div style={{ marginTop: 12, color: "crimson" }}>
-          {t("common:errors.generic")}
-          <pre style={{ whiteSpace: "pre-wrap" }}>
-            {JSON.stringify(error, null, 2)}
-          </pre>
-        </div>
-      )}
+      {isError && <ApiError title={t("common:errors.generic")} error={error} />}
 
       {!isLoading && !isError && rows.length === 0 && (
         <div style={{ marginTop: 12 }}>{t("recommendations:list.empty")}</div>
@@ -116,109 +109,33 @@ export function RecommendationsPage() {
 
       {!isLoading && !isError && rows.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  Model
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  ID
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  Weight
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  RSSI
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  Frequency
-                </th>
+          <DataTable columns={columns}>
+            {rows.map((c, idx) => (
+              <tr key={candidateKey(c, idx)}>
+                <DataTableCell>{safeString(c.model)}</DataTableCell>
+                <DataTableCell>{safeString(c.id)}</DataTableCell>
+                <DataTableCell>{c.weight ?? ""}</DataTableCell>
+                <DataTableCell>{c.rssi ?? ""}</DataTableCell>
+                <DataTableCell>{c.frequency ?? ""}</DataTableCell>
 
-                {/* ✅ Only show the action column if user can promote */}
-                {canPromote && (
-                  <th style={{ borderBottom: "1px solid #ddd", padding: 8 }} />
-                )}
-              </tr>
-            </thead>
-
-            <tbody>
-              {rows.map((c, idx) => (
-                <tr key={candidateKey(c, idx)}>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {safeString(c.model)}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {safeString(c.id)}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {c.weight ?? ""}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {c.rssi ?? ""}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {c.frequency ?? ""}
-                  </td>
-
-                  {/* ✅ Only show Promote button if allowed */}
+                <DataTableCell align="right">
                   {canPromote && (
-                    <td
-                      style={{
-                        padding: 8,
-                        borderBottom: "1px solid #f0f0f0",
-                        textAlign: "right",
-                      }}
+                    <button
+                      type="button"
+                      onClick={() => onOpenPromote(c)}
+                      disabled={!c.model || c.id === undefined || c.id === null}
                     >
-                      <button
-                        type="button"
-                        onClick={() => onOpenPromote(c)}
-                        disabled={
-                          !c.model || c.id === undefined || c.id === null
-                        }
-                      >
-                        {t("common:actions.promote")}
-                      </button>
-                    </td>
+                      {t("common:actions.promote")}
+                    </button>
                   )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </DataTableCell>
+              </tr>
+            ))}
+          </DataTable>
         </div>
       )}
 
-      {/* ✅ Promote dialog only exists if canPromote */}
+      {/* Promote dialog */}
       {canPromote && promoteOpen && selected && (
         <div
           role="dialog"
@@ -308,9 +225,10 @@ export function RecommendationsPage() {
               </div>
 
               {promoteState.isError && (
-                <div style={{ marginTop: 12, color: "crimson" }}>
-                  {t("common:errors.generic")}
-                </div>
+                <ApiError
+                  title={t("common:errors.generic")}
+                  error={promoteState.error}
+                />
               )}
 
               <div

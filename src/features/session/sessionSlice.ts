@@ -1,17 +1,19 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-type SessionState = {
+export type SessionProfile = {
+  sub?: string;
+  preferred_username?: string;
+  name?: string;
+  email?: string;
+};
+
+export type SessionState = {
   isLoading: boolean;
   isAuthenticated: boolean;
 
   // keep it light: store what the UI + API needs
   accessToken: string | null;
-  profile: {
-    sub?: string;
-    preferred_username?: string;
-    name?: string;
-    email?: string;
-  } | null;
+  profile: SessionProfile | null;
 
   permissions: string[];
 };
@@ -24,7 +26,7 @@ const initialState: SessionState = {
   permissions: [],
 };
 
-type SetSessionPayload = {
+export type SetSessionPayload = {
   accessToken: string | null;
   profile: SessionState["profile"];
   permissions: string[];
@@ -37,12 +39,23 @@ const sessionSlice = createSlice({
     setLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;
     },
+
+    // keep for backwards-compat with existing code
     clearSession(state) {
       state.isAuthenticated = false;
       state.accessToken = null;
       state.profile = null;
       state.permissions = [];
     },
+
+    // new: explicit action name used by baseApi 401 handling
+    signedOut(state) {
+      state.isAuthenticated = false;
+      state.accessToken = null;
+      state.profile = null;
+      state.permissions = [];
+    },
+
     setSession(state, action: PayloadAction<SetSessionPayload>) {
       state.isAuthenticated = !!action.payload.accessToken;
       state.accessToken = action.payload.accessToken;
@@ -52,5 +65,7 @@ const sessionSlice = createSlice({
   },
 });
 
-export const { setLoading, clearSession, setSession } = sessionSlice.actions;
+export const { setLoading, clearSession, signedOut, setSession } =
+  sessionSlice.actions;
+
 export default sessionSlice.reducer;
