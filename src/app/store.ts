@@ -7,6 +7,7 @@ import sessionReducer from "../features/session/sessionSlice";
 import toastsReducer from "../features/toasts/toastsSlice";
 
 import knownDevicesReducer from "../features/knownDevices/knownDevicesSlice";
+import modelsReducer from "../features/models/modelsSlice";
 import recommendationsUiReducer from "../features/recommendations/recommendationsSlice";
 
 import { baseApi } from "../services/api/baseApi";
@@ -21,6 +22,7 @@ export const store = configureStore({
 
     // feature slices
     knownDevices: knownDevicesReducer,
+    models: modelsReducer,
     recommendationsUi: recommendationsUiReducer,
 
     // RTK Query
