@@ -1,50 +1,69 @@
-import { apiFetch } from "../../api/http";
-import { unwrap, type ResourceWrapper } from "../../api/resourceWrapper";
+import { baseApi } from "../../services/api/baseApi";
 
-// TODO: Replace with exact RecommendationResource fields.
-export type RecommendationResource = {
-  // Typical fields in rtl433 pipeline
+export type ApiEnvelope<T> = {
+  content: T;
+  status: number;
+  timestamp: string;
+  messages: string[];
+};
+
+export type RecommendationCandidate = {
+  source?: string;
+
+  // identity-ish
   model?: string;
-  id?: string;
+  id?: string | number;
+  deviceId?: string | number; // some backends use deviceId (like known-devices)
   fingerprint?: string;
+
+  // confidence-ish
   weight?: number;
-  rssi?: number;
   frequency?: number;
-  [k: string]: unknown;
+  rssi?: number;
+
+  // misc
+  promoted?: boolean;
+  time?: string;
+  lastSeen?: string;
 };
 
-// TODO: Match your PromotionRequest DTO exactly.
-export type PromotionRequest = {
-  // include whatever your backend expects (this is a placeholder)
+export type PromoteRecommendationRequest = {
+  // these must match what your backend expects
   model: string;
-  id: string;
+  deviceId: string | number; // prefer deviceId to align with known-devices response
+
   name: string;
   area: string;
   deviceType: string;
+
+  fingerprint?: string;
 };
 
-export type KnownDeviceResource = {
-  id: string;
-  name: string;
-  area: string;
-  deviceType: string;
-  [k: string]: unknown;
-};
+export const recommendationsApi = baseApi.injectEndpoints({
+  endpoints: (build) => ({
+    listRecommendations: build.query<ApiEnvelope<RecommendationCandidate[]>, void>({
+      query: () => ({
+        // IMPORTANT: baseApi already includes "/api"
+        url: "/v1/recommendations",
+        method: "GET",
+      }),
+      providesTags: () => [{ type: "Recommendations", id: "LIST" }],
+    }),
 
-export function recommendationsApi(token: string | null) {
-  return {
-    listCandidates: async () => {
-      const w = await apiFetch<ResourceWrapper<RecommendationResource[]>>(`/api/v1/recommendations`, {}, token);
-      return unwrap(w);
-    },
+    promoteRecommendation: build.mutation<ApiEnvelope<unknown>, PromoteRecommendationRequest>({
+      query: (body) => ({
+        // IMPORTANT: baseApi already includes "/api"
+        url: "/v1/recommendations/promote",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: () => [{ type: "Recommendations", id: "LIST" }],
+    }),
+  }),
+  overrideExisting: false,
+});
 
-    promote: async (req: PromotionRequest) => {
-      const w = await apiFetch<ResourceWrapper<KnownDeviceResource>>(
-        `/api/v1/recommendations/promote`,
-        { method: "POST", body: JSON.stringify(req) },
-        token
-      );
-      return unwrap(w);
-    }
-  };
-}
+export const {
+  useListRecommendationsQuery,
+  usePromoteRecommendationMutation,
+} = recommendationsApi;

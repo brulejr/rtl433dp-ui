@@ -1,60 +1,87 @@
-import { apiFetch } from "../../api/http";
-import { unwrap, type ResourceWrapper } from "../../api/resourceWrapper";
+// src/features/models/modelsApi.ts
+import { baseApi } from "../../services/api/baseApi";
+import type { ApiEnvelope } from "../../services/api/envelope";
 
-export type ModelKey = { modelName: string; fingerprint: string };
-
-// TODO: Replace these with your exact ModelResource shapes.
-export type ModelResourceList = {
-  model: string;          // <-- was modelName
-  fingerprint: string;
+export type ModelSummary = {
   source?: string;
+  model: string;
+  fingerprint: string;
   category?: string;
-  [k: string]: unknown;
 };
 
-export type ModelResourceDetails = ModelResourceList & {
-  sensors?: unknown;
+export type ModelSensor = {
+  name: string;
+  deviceClass?: string;
+  stateClass?: string;
+  unitOfMeasurement?: string;
+  icon?: string;
+  valuePath?: string;
+  enabled?: boolean;
 };
 
-export type Rtl433Search = Record<string, unknown>;
-
-export type SensorsUpdateRequest = {
-  // Match your SensorsUpdateRequest DTO.
-  sensors: unknown;
+export type ModelDetails = ModelSummary & {
+  sensors?: ModelSensor[];
 };
 
-export function modelsApi(token: string | null) {
-  return {
-    list: async () => {
-      const w = await apiFetch<ResourceWrapper<ModelResourceList[]>>(`/api/v1/models`, {}, token);
-      return unwrap(w);
-    },
+export type ModelsSearchRequest = Record<string, unknown>;
 
-    get: async (key: ModelKey) => {
-      const w = await apiFetch<ResourceWrapper<ModelResourceDetails>>(
-        `/api/v1/models/${encodeURIComponent(key.modelName)}/${encodeURIComponent(key.fingerprint)}`,
-        {},
-        token
-      );
-      return unwrap(w);
-    },
+export const modelsApi = baseApi.injectEndpoints({
+  endpoints: (build) => ({
+    listModels: build.query<ApiEnvelope<ModelSummary[]>, void>({
+      query: () => ({
+        url: "/v1/models",
+        method: "GET",
+      }),
+      providesTags: () => [{ type: "Models", id: "LIST" }],
+    }),
 
-    search: async (req: Rtl433Search) => {
-      const w = await apiFetch<ResourceWrapper<ModelResourceList[]>>(
-        `/api/v1/models/search`,
-        { method: "POST", body: JSON.stringify(req) },
-        token
-      );
-      return unwrap(w);
-    },
+    searchModels: build.mutation<ApiEnvelope<ModelSummary[]>, ModelsSearchRequest>({
+      query: (body) => ({
+        url: "/v1/models/search",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: () => [{ type: "Models", id: "LIST" }],
+    }),
 
-    updateSensors: async (key: ModelKey, req: SensorsUpdateRequest) => {
-      const w = await apiFetch<ResourceWrapper<ModelResourceDetails>>(
-        `/api/v1/models/${encodeURIComponent(key.modelName)}/${encodeURIComponent(key.fingerprint)}/sensors`,
-        { method: "POST", body: JSON.stringify(req) },
-        token
-      );
-      return unwrap(w);
-    }
-  };
-}
+    getModelDetails: build.query<
+      ApiEnvelope<ModelDetails>,
+      { modelName: string; fingerprint: string }
+    >({
+      query: ({ modelName, fingerprint }) => ({
+        url: `/v1/models/${encodeURIComponent(modelName)}/${encodeURIComponent(
+          fingerprint
+        )}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _err, arg) => [
+        { type: "Models", id: "LIST" },
+        { type: "ModelDetails", id: `${arg.modelName}:${arg.fingerprint}` },
+      ],
+    }),
+
+    updateModelSensors: build.mutation<
+      ApiEnvelope<ModelDetails>,
+      { modelName: string; fingerprint: string; sensors: ModelSensor[] }
+    >({
+      query: ({ modelName, fingerprint, sensors }) => ({
+        url: `/v1/models/${encodeURIComponent(modelName)}/${encodeURIComponent(
+          fingerprint
+        )}/sensors`,
+        method: "PUT",
+        body: sensors,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "Models", id: "LIST" },
+        { type: "ModelDetails", id: `${arg.modelName}:${arg.fingerprint}` },
+      ],
+    }),
+  }),
+});
+
+export const {
+  useListModelsQuery,
+  useSearchModelsMutation,
+  useGetModelDetailsQuery,
+  useUpdateModelSensorsMutation,
+} = modelsApi;

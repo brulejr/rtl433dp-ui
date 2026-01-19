@@ -1,122 +1,174 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { useAuth } from "../../auth/AuthProvider";
-import { toUserMessage } from "../../api/errors";
-import { Card } from "../../components/Card";
-import { JsonBlock } from "../../components/JsonBlock";
-import { modelsApi, type ModelResourceList } from "./modelsApi";
 
-export function ModelsPage() {
-  const { t } = useTranslation(["models", "common"]);
-  const { getAccessToken } = useAuth();
-  const api = modelsApi(getAccessToken());
+import {
+  useListModelsQuery,
+  useSearchModelsMutation,
+  type ModelSummary,
+  type ModelsSearchRequest,
+} from "./modelsApi";
 
-  const [searchJson, setSearchJson] = React.useState<string>("{\n  \n}");
-  const [searchResults, setSearchResults] = React.useState<
-    ModelResourceList[] | null
-  >(null);
-  const [searchError, setSearchError] = React.useState<string | null>(null);
+import {
+  PageHeader,
+  ErrorPanel,
+  EmptyState,
+  DataTable,
+  type DataColumn,
+} from "../../components";
 
-  const listQ = useQuery({
-    queryKey: ["models", "list"],
-    queryFn: api.list,
-  });
+function safeString(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return String(v);
+}
 
-  const runSearch = async () => {
+function modelKey(m: ModelSummary, idx: number): string {
+  const key = [safeString(m.model), safeString(m.fingerprint)]
+    .filter(Boolean)
+    .join(":");
+  return key || `row-${idx}`;
+}
+
+export default function ModelsPage() {
+  const { t } = useTranslation(["common", "models"]);
+
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useListModelsQuery();
+  const [searchModels, searchState] = useSearchModelsMutation();
+
+  // Keep a simple “advanced JSON” input like earlier, but not slice-dependent.
+  const [searchJson, setSearchJson] = useState<string>("");
+
+  const rows = useMemo(() => data?.content ?? [], [data]);
+
+  const onSubmitSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = searchJson.trim();
+    if (!trimmed) return;
+
+    let body: ModelsSearchRequest;
     try {
-      setSearchError(null);
-      const parsed = JSON.parse(searchJson || "{}") as Record<string, unknown>;
-      const res = await api.search(parsed);
-      setSearchResults(res);
-    } catch (e) {
-      setSearchError(String(e));
+      body = JSON.parse(trimmed) as ModelsSearchRequest;
+    } catch {
+      // If you already have a toast pattern, swap this out.
+      alert("Search JSON is invalid.");
+      return;
     }
+
+    await searchModels(body).unwrap();
+    // NOTE: your API marks search invalidates tags, so list refetch will happen.
   };
 
-  const resetSearch = () => {
-    setSearchResults(null);
-    setSearchError(null);
-    setSearchJson("{\n  \n}");
-  };
+  const columns: Array<DataColumn<ModelSummary>> = [
+    {
+      header: t("models:fields.modelName"),
+      render: (m) => safeString(m.model),
+    },
+    {
+      header: t("models:fields.fingerprint"),
+      render: (m) => (
+        <code style={{ fontSize: 12 }}>{safeString(m.fingerprint)}</code>
+      ),
+    },
+    {
+      header: "Category",
+      render: (m) => safeString(m.category),
+    },
+    {
+      header: "",
+      align: "right",
+      render: (m) => (
+        <Link
+          to={`/models/${encodeURIComponent(m.model)}/${encodeURIComponent(
+            m.fingerprint
+          )}`}
+        >
+          Details
+        </Link>
+      ),
+    },
+  ];
 
   return (
-    <div>
-      <Card
+    <div style={{ padding: 16 }}>
+      <PageHeader
         title={t("models:title")}
+        isBusy={isLoading || isFetching || searchState.isLoading}
         actions={
-          <button
-            onClick={() => listQ.refetch()}
-            style={{ padding: "8px 10px", borderRadius: 8 }}
-          >
-            {t("common:actions.refresh")}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              disabled={isLoading || isFetching}
+            >
+              {t("common:actions.refresh")}
+            </button>
+          </>
         }
-      >
-        {listQ.isLoading && <div>Loading…</div>}
-        {listQ.error && <div>{toUserMessage(listQ.error, t)}</div>}
+      />
 
-        {!listQ.isLoading &&
-          !listQ.error &&
-          (listQ.data?.length ?? 0) === 0 && (
-            <div style={{ opacity: 0.85 }}>{t("models:list.empty")}</div>
-          )}
+      {/* Search (advanced) */}
+      <div style={{ marginTop: 12 }}>
+        <details>
+          <summary style={{ cursor: "pointer" }}>
+            {t("models:search.title")}
+          </summary>
+          <div style={{ marginTop: 10 }}>
+            <div style={{ opacity: 0.8, marginBottom: 8 }}>
+              {t("models:search.hint")}
+            </div>
 
-        {!listQ.isLoading && !listQ.error && (listQ.data?.length ?? 0) > 0 && (
-          <ul style={{ paddingLeft: 18, margin: 0 }}>
-            {listQ.data!.map((m) => (
-              <li key={`${m.modelName}:${m.fingerprint}`}>
-                <Link
-                  to={`/models/${encodeURIComponent(
-                    m.model
-                  )}/${encodeURIComponent(m.fingerprint)}`}
-                  style={{ color: "#9ad1ff" }}
+            <form onSubmit={onSubmitSearch}>
+              <textarea
+                value={searchJson}
+                onChange={(e) => setSearchJson(e.target.value)}
+                placeholder='{"model":"Acurite-Tower"}'
+                rows={6}
+                style={{ width: "100%", fontFamily: "monospace" }}
+              />
+
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button
+                  type="submit"
+                  disabled={searchState.isLoading || !searchJson.trim()}
                 >
-                  {m.model} / {m.fingerprint}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+                  {t("models:search.submit")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchJson("")}
+                  disabled={searchState.isLoading}
+                >
+                  {t("models:search.reset")}
+                </button>
+              </div>
 
-      <Card
-        title={t("models:search.title")}
-        actions={
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={runSearch}
-              style={{ padding: "8px 10px", borderRadius: 8 }}
-            >
-              {t("models:search.submit")}
-            </button>
-            <button
-              onClick={resetSearch}
-              style={{ padding: "8px 10px", borderRadius: 8 }}
-            >
-              {t("models:search.reset")}
-            </button>
+              {searchState.isError ? (
+                <ErrorPanel
+                  message={t("common:errors.generic")}
+                  error={searchState.error}
+                />
+              ) : null}
+            </form>
           </div>
-        }
-      >
-        <p style={{ marginTop: 0, opacity: 0.85 }}>{t("models:search.hint")}</p>
-        <textarea
-          value={searchJson}
-          onChange={(e) => setSearchJson(e.target.value)}
-          rows={8}
-          style={{ width: "100%", borderRadius: 12, padding: 12 }}
+        </details>
+      </div>
+
+      {isError ? (
+        <ErrorPanel message={t("common:errors.generic")} error={error} />
+      ) : null}
+
+      {!isLoading && !isError && rows.length === 0 ? (
+        <EmptyState>{t("models:list.empty")}</EmptyState>
+      ) : null}
+
+      {!isLoading && !isError && rows.length > 0 ? (
+        <DataTable<ModelSummary>
+          columns={columns}
+          rows={rows}
+          keyForRow={modelKey}
         />
-        {searchError && (
-          <div style={{ marginTop: 8, color: "#ffb4b4" }}>{searchError}</div>
-        )}
-
-        {searchResults && (
-          <div style={{ marginTop: 12 }}>
-            <JsonBlock value={searchResults} />
-          </div>
-        )}
-      </Card>
+      ) : null}
     </div>
   );
 }

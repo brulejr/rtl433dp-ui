@@ -1,70 +1,375 @@
 import React from "react";
-import { useParams } from "react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+import { Link, useParams } from "react-router";
 import { useAuth } from "../../auth/AuthProvider";
-import { toUserMessage } from "../../api/errors";
-import { Card } from "../../components/Card";
-import { JsonBlock } from "../../components/JsonBlock";
-import { modelsApi, type ModelKey } from "./modelsApi";
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import {
+  addDraftSensor,
+  beginEditSensors,
+  cancelEditSensors,
+  patchDraftSensor,
+  removeDraftSensor,
+  saveModelSensors,
+  selectIsEditingSensorsFor,
+  selectSensorsEdit,
+} from "./modelsSlice";
+import { useGetModelDetailsQuery } from "./modelsApi";
 
 export function ModelDetailsPage() {
-  const { t } = useTranslation(["models", "common"]);
-  const params = useParams();
-  const modelName = params.modelName ?? "";
-  const fingerprint = params.fingerprint ?? "";
-  const key: ModelKey = { modelName: decodeURIComponent(modelName), fingerprint: decodeURIComponent(fingerprint) };
+  const { modelName, fingerprint } = useParams();
+  const dispatch = useAppDispatch();
+  const auth = useAuth();
 
-  const { getAccessToken } = useAuth();
-  const api = modelsApi(getAccessToken());
+  const canUpdateSensors =
+    auth.hasPermission("model:update") ||
+    auth.hasPermission("model:promote") ||
+    auth.hasPermission("model:admin");
 
-  const detailsQ = useQuery({
-    queryKey: ["models", "details", key.modelName, key.fingerprint],
-    queryFn: () => api.get(key)
-  });
+  const isEditingForThis = useAppSelector(
+    selectIsEditingSensorsFor(modelName ?? "", fingerprint ?? "")
+  );
+  const sensorsEdit = useAppSelector(selectSensorsEdit);
 
-  const [sensorsJson, setSensorsJson] = React.useState<string>("{\n  \n}");
+  const query = useGetModelDetailsQuery(
+    { modelName: modelName ?? "", fingerprint: fingerprint ?? "" },
+    { skip: !modelName || !fingerprint }
+  );
 
-  const updateM = useMutation({
-    mutationFn: async () => {
-      const parsed = JSON.parse(sensorsJson || "{}");
-      return api.updateSensors(key, { sensors: parsed });
-    },
-    onSuccess: () => detailsQ.refetch()
-  });
+  if (!modelName || !fingerprint) {
+    return (
+      <div style={{ padding: 16 }}>
+        <div>Invalid route parameters.</div>
+        <div style={{ marginTop: 8 }}>
+          <Link to="/models">Back to Models</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const envelope = query.data;
+  const details = envelope?.content;
+
+  const sensors = isEditingForThis
+    ? sensorsEdit.draftSensors
+    : details?.sensors ?? [];
+
+  const onEdit = () => {
+    dispatch(
+      beginEditSensors({
+        modelName,
+        fingerprint,
+        sensors: details?.sensors ?? [],
+      })
+    );
+  };
+
+  const onSave = () => {
+    dispatch(
+      saveModelSensors({
+        modelName,
+        fingerprint,
+        sensors: sensorsEdit.draftSensors,
+      })
+    );
+  };
 
   return (
-    <div>
-      <Card title={`${t("models:details.title")}: ${key.modelName} / ${key.fingerprint}`}>
-        {detailsQ.isLoading && <div>Loading…</div>}
-        {detailsQ.error && <div>{toUserMessage(detailsQ.error, t)}</div>}
-        {detailsQ.data && <JsonBlock value={detailsQ.data} />}
-      </Card>
+    <div style={{ padding: 16 }}>
+      <div style={{ marginBottom: 12 }}>
+        <Link to="/models">← Back to Models</Link>
+      </div>
 
-      <Card
-        title={t("models:details.updateSensors")}
-        actions={
-          <button
-            onClick={() => updateM.mutate()}
-            disabled={updateM.isPending}
-            style={{ padding: "8px 10px", borderRadius: 8 }}
-          >
-            {t("common:actions.save")}
-          </button>
-        }
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 12,
+        }}
       >
-        <p style={{ marginTop: 0, opacity: 0.85 }}>
-          Paste the JSON payload for <code>SensorsUpdateRequest</code> (currently modeled as <code>{"{ sensors: any }"}</code>).
-        </p>
-        <textarea
-          value={sensorsJson}
-          onChange={(e) => setSensorsJson(e.target.value)}
-          rows={8}
-          style={{ width: "100%", borderRadius: 12, padding: 12 }}
-        />
-        {updateM.error && <div style={{ marginTop: 8, color: "#ffb4b4" }}>{toUserMessage(updateM.error, t)}</div>}
-        {updateM.isSuccess && <div style={{ marginTop: 8, opacity: 0.85 }}>Updated.</div>}
-      </Card>
+        <h2 style={{ margin: 0 }}>Model Details</h2>
+
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => void query.refetch()}
+            disabled={query.isFetching}
+          >
+            Refresh
+          </button>
+
+          {canUpdateSensors && !isEditingForThis && (
+            <button
+              type="button"
+              onClick={onEdit}
+              disabled={query.isLoading || query.isFetching}
+            >
+              Edit Sensors
+            </button>
+          )}
+
+          {canUpdateSensors && isEditingForThis && (
+            <>
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={sensorsEdit.isSaving}
+              >
+                {sensorsEdit.isSaving ? "Saving..." : "Save"}
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatch(cancelEditSensors())}
+                disabled={sensorsEdit.isSaving}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {query.isLoading ? (
+        <div>Loading...</div>
+      ) : query.isError ? (
+        <div style={{ color: "crimson" }}>Failed to load model details.</div>
+      ) : !details ? (
+        <div>No details found.</div>
+      ) : (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <div>
+              <strong>Model:</strong> {details.model}
+            </div>
+            <div>
+              <strong>Fingerprint:</strong> <code>{details.fingerprint}</code>
+            </div>
+            {details.category && (
+              <div>
+                <strong>Category:</strong> {details.category}
+              </div>
+            )}
+            {details.source && (
+              <div>
+                <strong>Source:</strong> {details.source}
+              </div>
+            )}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 8,
+            }}
+          >
+            <h3 style={{ margin: 0 }}>Sensors</h3>
+
+            {canUpdateSensors && isEditingForThis && (
+              <div style={{ marginLeft: "auto" }}>
+                <button
+                  type="button"
+                  onClick={() => dispatch(addDraftSensor())}
+                  disabled={sensorsEdit.isSaving}
+                >
+                  + Add Sensor
+                </button>
+              </div>
+            )}
+          </div>
+
+          {sensorsEdit.saveError && isEditingForThis && (
+            <div style={{ color: "crimson", marginBottom: 8 }}>
+              {sensorsEdit.saveError}
+            </div>
+          )}
+
+          {sensors.length === 0 ? (
+            <div>No sensors defined.</div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={th}>Name</th>
+                  <th style={th}>Value Path</th>
+                  <th style={th}>Device Class</th>
+                  <th style={th}>State Class</th>
+                  <th style={th}>Unit</th>
+                  <th style={th}>Icon</th>
+                  <th style={th}>Enabled</th>
+                  {canUpdateSensors && isEditingForThis && <th style={th}></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {sensors.map((s, idx) => (
+                  <tr key={`${idx}-${s.name}-${s.valuePath}`}>
+                    <td style={td}>
+                      {isEditingForThis ? (
+                        <input
+                          value={s.name ?? ""}
+                          onChange={(e) =>
+                            dispatch(
+                              patchDraftSensor({
+                                index: idx,
+                                patch: { name: e.target.value },
+                              })
+                            )
+                          }
+                          style={{ width: "100%" }}
+                        />
+                      ) : (
+                        s.name
+                      )}
+                    </td>
+
+                    <td style={td}>
+                      {isEditingForThis ? (
+                        <input
+                          value={s.valuePath ?? ""}
+                          onChange={(e) =>
+                            dispatch(
+                              patchDraftSensor({
+                                index: idx,
+                                patch: { valuePath: e.target.value },
+                              })
+                            )
+                          }
+                          style={{ width: "100%", fontFamily: "monospace" }}
+                          placeholder="temperature_C"
+                        />
+                      ) : (
+                        <code>{s.valuePath ?? ""}</code>
+                      )}
+                    </td>
+
+                    <td style={td}>
+                      {isEditingForThis ? (
+                        <input
+                          value={s.deviceClass ?? ""}
+                          onChange={(e) =>
+                            dispatch(
+                              patchDraftSensor({
+                                index: idx,
+                                patch: { deviceClass: e.target.value },
+                              })
+                            )
+                          }
+                          style={{ width: "100%" }}
+                        />
+                      ) : (
+                        s.deviceClass ?? ""
+                      )}
+                    </td>
+
+                    <td style={td}>
+                      {isEditingForThis ? (
+                        <input
+                          value={s.stateClass ?? ""}
+                          onChange={(e) =>
+                            dispatch(
+                              patchDraftSensor({
+                                index: idx,
+                                patch: { stateClass: e.target.value },
+                              })
+                            )
+                          }
+                          style={{ width: "100%" }}
+                        />
+                      ) : (
+                        s.stateClass ?? ""
+                      )}
+                    </td>
+
+                    <td style={td}>
+                      {isEditingForThis ? (
+                        <input
+                          value={s.unitOfMeasurement ?? ""}
+                          onChange={(e) =>
+                            dispatch(
+                              patchDraftSensor({
+                                index: idx,
+                                patch: { unitOfMeasurement: e.target.value },
+                              })
+                            )
+                          }
+                          style={{ width: "100%" }}
+                        />
+                      ) : (
+                        s.unitOfMeasurement ?? ""
+                      )}
+                    </td>
+
+                    <td style={td}>
+                      {isEditingForThis ? (
+                        <input
+                          value={s.icon ?? ""}
+                          onChange={(e) =>
+                            dispatch(
+                              patchDraftSensor({
+                                index: idx,
+                                patch: { icon: e.target.value },
+                              })
+                            )
+                          }
+                          style={{ width: "100%" }}
+                          placeholder="mdi:thermometer"
+                        />
+                      ) : (
+                        s.icon ?? ""
+                      )}
+                    </td>
+
+                    <td style={td}>
+                      {isEditingForThis ? (
+                        <input
+                          type="checkbox"
+                          checked={s.enabled !== false}
+                          onChange={(e) =>
+                            dispatch(
+                              patchDraftSensor({
+                                index: idx,
+                                patch: { enabled: e.target.checked },
+                              })
+                            )
+                          }
+                        />
+                      ) : s.enabled === false ? (
+                        "No"
+                      ) : (
+                        "Yes"
+                      )}
+                    </td>
+
+                    {canUpdateSensors && isEditingForThis && (
+                      <td style={td}>
+                        <button
+                          type="button"
+                          onClick={() => dispatch(removeDraftSensor(idx))}
+                          disabled={sensorsEdit.isSaving}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
     </div>
   );
 }
+
+const th: React.CSSProperties = {
+  textAlign: "left",
+  borderBottom: "1px solid #ddd",
+  padding: "8px 6px",
+};
+
+const td: React.CSSProperties = {
+  borderBottom: "1px solid #eee",
+  padding: "8px 6px",
+  verticalAlign: "top",
+};

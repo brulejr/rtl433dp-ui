@@ -1,184 +1,330 @@
-import React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+// src/features/recommendations/RecommendationsPage.tsx
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "../../auth/AuthProvider";
-import { toUserMessage } from "../../api/errors";
-import { Card } from "../../components/Card";
-import { JsonBlock } from "../../components/JsonBlock";
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
-  recommendationsApi,
-  type PromotionRequest,
-  type RecommendationResource,
+  useListRecommendationsQuery,
+  usePromoteRecommendationMutation,
+  type RecommendationCandidate,
 } from "./recommendationsApi";
+import {
+  closePromote,
+  openPromote,
+  selectPromoteForm,
+  selectPromoteOpen,
+  selectSelectedCandidate,
+  setPromoteField,
+} from "./recommendationsSlice";
+import { selectHasPermission } from "../session/sessionSlice";
+
+function safeString(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return String(v);
+}
+
+function candidateKey(c: RecommendationCandidate, idx: number): string {
+  // prefer stable identity if present
+  const model = safeString(c.model);
+  const id = safeString(c.id);
+  const fp = safeString(c.fingerprint);
+  const key = [model, id, fp].filter(Boolean).join(":");
+  return key || `row-${idx}`;
+}
 
 export function RecommendationsPage() {
-  const { t } = useTranslation(["recommendations", "common"]);
-  const { getAccessToken, hasPermission } = useAuth();
-  const api = recommendationsApi(getAccessToken());
-  const qc = useQueryClient();
+  const { t } = useTranslation(["common", "recommendations"]);
 
-  const listQ = useQuery({
-    queryKey: ["recommendations", "candidates"],
-    queryFn: api.listCandidates,
-  });
+  const dispatch = useAppDispatch();
+  const promoteOpen = useAppSelector(selectPromoteOpen);
+  const selected = useAppSelector(selectSelectedCandidate);
+  const promoteForm = useAppSelector(selectPromoteForm);
 
-  const promoteM = useMutation({
-    mutationFn: (req: PromotionRequest) => api.promote(req),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["recommendations", "candidates"] });
-      qc.invalidateQueries({ queryKey: ["knownDevices", "list"] });
-    },
-  });
-
-  const [selected, setSelected] = React.useState<RecommendationResource | null>(
-    null
+  // ✅ Permission gate (no hook import needed)
+  const canPromote = useAppSelector(
+    selectHasPermission("recommendation:promote")
   );
-  const [name, setName] = React.useState("");
-  const [area, setArea] = React.useState("");
-  const [deviceType, setDeviceType] = React.useState("");
 
-  const promote = () => {
-    if (!selected) return;
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useListRecommendationsQuery();
 
-    // This assumes your backend expects model+id + metadata. Adjust to match your PromotionRequest exactly.
-    const model = String(selected.model ?? "");
-    const id = String(selected.id ?? "");
-    promoteM.mutate({ model, id, name, area, deviceType });
+  const [promote, promoteState] = usePromoteRecommendationMutation();
+
+  const rows = useMemo(() => data?.content ?? [], [data]);
+
+  const onOpenPromote = (c: RecommendationCandidate) => {
+    if (!canPromote) return;
+    dispatch(openPromote(c));
+  };
+
+  const onClosePromote = () => dispatch(closePromote());
+
+  const onSubmitPromote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canPromote) return;
+
+    if (!selected?.model || selected.id === undefined || selected.id === null)
+      return;
+
+    await promote({
+      model: selected.model,
+      id: selected.id,
+      fingerprint: selected.fingerprint,
+      name: promoteForm.name.trim(),
+      area: promoteForm.area.trim(),
+      deviceType: promoteForm.deviceType.trim(),
+    }).unwrap();
+
+    dispatch(closePromote());
   };
 
   return (
-    <div>
-      <Card
-        title={t("recommendations:title")}
-        actions={
-          <button
-            onClick={() => listQ.refetch()}
-            style={{ padding: "8px 10px", borderRadius: 8 }}
-          >
-            {t("common:actions.refresh")}
-          </button>
-        }
-      >
-        {listQ.isLoading && <div>Loading…</div>}
-        {listQ.error && <div>{toUserMessage(listQ.error, t)}</div>}
+    <div style={{ padding: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <h2 style={{ margin: 0 }}>{t("recommendations:title")}</h2>
 
-        {!listQ.isLoading &&
-          !listQ.error &&
-          (listQ.data?.length ?? 0) === 0 && (
-            <div style={{ opacity: 0.85 }}>
-              {t("recommendations:list.empty")}
-            </div>
-          )}
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isLoading || isFetching}
+        >
+          {t("common:actions.refresh")}
+        </button>
 
-        {!listQ.isLoading && !listQ.error && (listQ.data?.length ?? 0) > 0 && (
-          <ul style={{ paddingLeft: 18, margin: 0 }}>
-            {listQ.data!.map((r, idx) => (
-              <li key={idx} style={{ marginBottom: 6 }}>
-                {hasPermission("recommendation:promote") && (
-                  <button
-                    onClick={() => setSelected(r)}
-                    style={{ padding: "6px 8px", borderRadius: 8 }}
-                  >
-                    Select
-                  </button>
-                )}
-                <span style={{ opacity: 0.9 }}>
-                  {String(r.model ?? "")} / {String(r.id ?? "")}
-                  {typeof r.weight === "number" ? `  (weight=${r.weight})` : ""}
-                  {typeof r.rssi === "number" ? `  (rssi=${r.rssi})` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
+        {(isLoading || isFetching) && (
+          <span style={{ opacity: 0.7 }}>Loading…</span>
         )}
-      </Card>
+      </div>
 
-      {hasPermission("recommendation:promote") && (
-        <Card title={t("recommendations:promote.title")}>
-          {!selected && (
-            <div style={{ opacity: 0.85 }}>
-              Select a candidate above to promote.
+      {isError && (
+        <div style={{ marginTop: 12, color: "crimson" }}>
+          {t("common:errors.generic")}
+          <pre style={{ whiteSpace: "pre-wrap" }}>
+            {JSON.stringify(error, null, 2)}
+          </pre>
+        </div>
+      )}
+
+      {!isLoading && !isError && rows.length === 0 && (
+        <div style={{ marginTop: 12 }}>{t("recommendations:list.empty")}</div>
+      )}
+
+      {!isLoading && !isError && rows.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th
+                  style={{
+                    textAlign: "left",
+                    borderBottom: "1px solid #ddd",
+                    padding: 8,
+                  }}
+                >
+                  Model
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    borderBottom: "1px solid #ddd",
+                    padding: 8,
+                  }}
+                >
+                  ID
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    borderBottom: "1px solid #ddd",
+                    padding: 8,
+                  }}
+                >
+                  Weight
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    borderBottom: "1px solid #ddd",
+                    padding: 8,
+                  }}
+                >
+                  RSSI
+                </th>
+                <th
+                  style={{
+                    textAlign: "left",
+                    borderBottom: "1px solid #ddd",
+                    padding: 8,
+                  }}
+                >
+                  Frequency
+                </th>
+                <th style={{ borderBottom: "1px solid #ddd", padding: 8 }} />
+              </tr>
+            </thead>
+
+            <tbody>
+              {rows.map((c, idx) => (
+                <tr key={candidateKey(c, idx)}>
+                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
+                    {safeString(c.model)}
+                  </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
+                    {safeString(c.id)}
+                  </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
+                    {c.weight ?? ""}
+                  </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
+                    {c.rssi ?? ""}
+                  </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
+                    {c.frequency ?? ""}
+                  </td>
+
+                  <td
+                    style={{
+                      padding: 8,
+                      borderBottom: "1px solid #f0f0f0",
+                      textAlign: "right",
+                    }}
+                  >
+                    {/* ✅ Only show Promote if permitted */}
+                    {canPromote && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenPromote(c)}
+                        disabled={
+                          !c.model || c.id === undefined || c.id === null
+                        }
+                      >
+                        {t("common:actions.promote")}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Promote dialog (only render when permitted) */}
+      {canPromote && promoteOpen && selected && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={onClosePromote}
+        >
+          <div
+            style={{
+              width: "min(640px, 100%)",
+              background: "white",
+              borderRadius: 8,
+              padding: 16,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              {t("recommendations:promote.title")}
+            </h3>
+
+            <div style={{ marginBottom: 12, opacity: 0.8 }}>
+              <div>
+                <strong>Model:</strong> {safeString(selected.model)}
+              </div>
+              <div>
+                <strong>ID:</strong> {safeString(selected.id)}
+              </div>
             </div>
-          )}
-          {selected && (
-            <>
-              <p style={{ marginTop: 0, opacity: 0.85 }}>
-                Candidate:
-                <code style={{ marginLeft: 8 }}>
-                  {String(selected.model ?? "")}/{String(selected.id ?? "")}
-                </code>
-              </p>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  gap: 12,
-                }}
-              >
-                <label>
-                  <div style={{ opacity: 0.8, marginBottom: 4 }}>
-                    {t("recommendations:promote.name")}
-                  </div>
+            <form onSubmit={onSubmitPromote}>
+              <div style={{ display: "grid", gap: 10 }}>
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span>{t("recommendations:promote.name")}</span>
                   <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    style={{ width: "100%", borderRadius: 10, padding: 8 }}
+                    value={promoteForm.name}
+                    onChange={(e) =>
+                      dispatch(
+                        setPromoteField({
+                          field: "name",
+                          value: e.target.value,
+                        })
+                      )
+                    }
+                    required
                   />
                 </label>
-                <label>
-                  <div style={{ opacity: 0.8, marginBottom: 4 }}>
-                    {t("recommendations:promote.area")}
-                  </div>
+
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span>{t("recommendations:promote.area")}</span>
                   <input
-                    value={area}
-                    onChange={(e) => setArea(e.target.value)}
-                    style={{ width: "100%", borderRadius: 10, padding: 8 }}
+                    value={promoteForm.area}
+                    onChange={(e) =>
+                      dispatch(
+                        setPromoteField({
+                          field: "area",
+                          value: e.target.value,
+                        })
+                      )
+                    }
+                    required
                   />
                 </label>
-                <label>
-                  <div style={{ opacity: 0.8, marginBottom: 4 }}>
-                    {t("recommendations:promote.deviceType")}
-                  </div>
+
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span>{t("recommendations:promote.deviceType")}</span>
                   <input
-                    value={deviceType}
-                    onChange={(e) => setDeviceType(e.target.value)}
-                    style={{ width: "100%", borderRadius: 10, padding: 8 }}
+                    value={promoteForm.deviceType}
+                    onChange={(e) =>
+                      dispatch(
+                        setPromoteField({
+                          field: "deviceType",
+                          value: e.target.value,
+                        })
+                      )
+                    }
+                    required
                   />
                 </label>
               </div>
+
+              {promoteState.isError && (
+                <div style={{ marginTop: 12, color: "crimson" }}>
+                  {t("common:errors.generic")}
+                </div>
+              )}
 
               <div
                 style={{
                   display: "flex",
-                  gap: 10,
-                  marginTop: 12,
-                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: 8,
+                  marginTop: 16,
                 }}
               >
                 <button
-                  onClick={promote}
-                  disabled={promoteM.isPending}
-                  style={{ padding: "8px 10px", borderRadius: 8 }}
+                  type="button"
+                  onClick={onClosePromote}
+                  disabled={promoteState.isLoading}
                 >
-                  {t("common:actions.promote")}
+                  {t("common:actions.cancel")}
                 </button>
-                {promoteM.error && (
-                  <span style={{ color: "#ffb4b4" }}>
-                    {toUserMessage(promoteM.error, t)}
-                  </span>
-                )}
-                {promoteM.isSuccess && (
-                  <span style={{ opacity: 0.85 }}>Promoted.</span>
-                )}
+                <button type="submit" disabled={promoteState.isLoading}>
+                  {t("recommendations:promote.submit")}
+                </button>
               </div>
-
-              <div style={{ marginTop: 12 }}>
-                <JsonBlock value={selected} />
-              </div>
-            </>
-          )}
-        </Card>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
