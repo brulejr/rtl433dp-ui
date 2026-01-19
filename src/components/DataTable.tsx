@@ -1,59 +1,64 @@
-// src/components/DataTable.tsx
 import React from "react";
 
-export type DataTableColumn = {
-  key: string;
+export type DataColumn<Row> = {
   header: React.ReactNode;
-  align?: "left" | "right" | "center";
   width?: string | number;
-};
-
-type Props = {
-  columns: DataTableColumn[];
-  children: React.ReactNode; // <tr>...</tr> rows
-};
-
-export function DataTable({ columns, children }: Props) {
-  return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr>
-          {columns.map((c) => (
-            <th
-              key={c.key}
-              style={{
-                textAlign: c.align ?? "left",
-                borderBottom: "1px solid #ddd",
-                padding: 8,
-                width: c.width,
-              }}
-            >
-              {c.header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>{children}</tbody>
-    </table>
-  );
-}
-
-export function DataTableCell({
-  align,
-  children,
-}: {
   align?: "left" | "right" | "center";
-  children: React.ReactNode;
-}) {
+  render: (row: Row, idx: number) => React.ReactNode;
+};
+
+type DataTableProps<Row> = {
+  columns: Array<DataColumn<Row>>;
+  rows: Row[];
+  keyForRow?: (row: Row, idx: number) => string;
+};
+
+export function DataTable<Row>({
+  columns,
+  rows,
+  keyForRow,
+}: DataTableProps<Row>) {
   return (
-    <td
-      style={{
-        padding: 8,
-        borderBottom: "1px solid #f0f0f0",
-        textAlign: align ?? "left",
-      }}
-    >
-      {children}
-    </td>
+    <div style={{ marginTop: 12 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            {columns.map((c, i) => (
+              <th
+                key={i}
+                style={{
+                  textAlign: c.align ?? "left",
+                  borderBottom: "1px solid #ddd",
+                  padding: 8,
+                  width: c.width,
+                }}
+              >
+                {c.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.map((row, idx) => (
+            <tr key={keyForRow ? keyForRow(row, idx) : String(idx)}>
+              {columns.map((c, colIdx) => (
+                <td
+                  key={colIdx}
+                  style={{
+                    padding: 8,
+                    borderBottom: "1px solid #f0f0f0",
+                    textAlign: c.align ?? "left",
+                    verticalAlign: "top",
+                  }}
+                >
+                  {c.render(row, idx)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

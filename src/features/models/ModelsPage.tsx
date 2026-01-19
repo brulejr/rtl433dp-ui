@@ -1,174 +1,174 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { useAppDispatch, useAppSelector } from "../../app/hooks";
+
 import {
-  clearSearch,
-  runModelsSearch,
-  selectModelsIsSearching,
-  selectModelsMode,
-  selectModelsSearchError,
-  selectModelsSearchJson,
-  selectModelsSearchResults,
-  setMode,
-  setSearchJson,
-} from "./modelsSlice";
-import { useListModelsQuery, type ModelSummary } from "./modelsApi";
+  useListModelsQuery,
+  useSearchModelsMutation,
+  type ModelSummary,
+  type ModelsSearchRequest,
+} from "./modelsApi";
+
+import {
+  PageHeader,
+  ErrorPanel,
+  EmptyState,
+  DataTable,
+  type DataColumn,
+} from "../../components";
+
+function safeString(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return String(v);
+}
+
+function modelKey(m: ModelSummary, idx: number): string {
+  const key = [safeString(m.model), safeString(m.fingerprint)]
+    .filter(Boolean)
+    .join(":");
+  return key || `row-${idx}`;
+}
 
 export default function ModelsPage() {
-  const dispatch = useAppDispatch();
+  const { t } = useTranslation(["common", "models"]);
 
-  const mode = useAppSelector(selectModelsMode);
-  const searchJson = useAppSelector(selectModelsSearchJson);
-  const isSearching = useAppSelector(selectModelsIsSearching);
-  const searchError = useAppSelector(selectModelsSearchError);
-  const searchResults = useAppSelector(selectModelsSearchResults);
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useListModelsQuery();
+  const [searchModels, searchState] = useSearchModelsMutation();
 
-  const listQuery = useListModelsQuery(undefined, {
-    // only matters for rendering; RTKQ will cache anyway
-    skip: mode !== "list",
-  });
+  // Keep a simple “advanced JSON” input like earlier, but not slice-dependent.
+  const [searchJson, setSearchJson] = useState<string>("");
 
-  const isLoading =
-    mode === "list" ? listQuery.isLoading || listQuery.isFetching : isSearching;
+  const rows = useMemo(() => data?.content ?? [], [data]);
 
-  const items: ModelSummary[] =
-    mode === "list" ? listQuery.data?.content ?? [] : searchResults ?? [];
+  const onSubmitSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = searchJson.trim();
+    if (!trimmed) return;
 
-  const onRefresh = () => {
-    if (mode === "list") {
-      void listQuery.refetch();
-    } else {
-      dispatch(runModelsSearch(searchJson));
+    let body: ModelsSearchRequest;
+    try {
+      body = JSON.parse(trimmed) as ModelsSearchRequest;
+    } catch {
+      // If you already have a toast pattern, swap this out.
+      alert("Search JSON is invalid.");
+      return;
     }
+
+    await searchModels(body).unwrap();
+    // NOTE: your API marks search invalidates tags, so list refetch will happen.
   };
 
-  const onRunSearch = () => {
-    dispatch(runModelsSearch(searchJson));
-  };
+  const columns: Array<DataColumn<ModelSummary>> = [
+    {
+      header: t("models:fields.modelName"),
+      render: (m) => safeString(m.model),
+    },
+    {
+      header: t("models:fields.fingerprint"),
+      render: (m) => (
+        <code style={{ fontSize: 12 }}>{safeString(m.fingerprint)}</code>
+      ),
+    },
+    {
+      header: "Category",
+      render: (m) => safeString(m.category),
+    },
+    {
+      header: "",
+      align: "right",
+      render: (m) => (
+        <Link
+          to={`/models/${encodeURIComponent(m.model)}/${encodeURIComponent(
+            m.fingerprint
+          )}`}
+        >
+          Details
+        </Link>
+      ),
+    },
+  ];
 
   return (
     <div style={{ padding: 16 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: 12,
-        }}
-      >
-        <h2 style={{ margin: 0 }}>Models</h2>
-
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            type="button"
-            onClick={() => dispatch(setMode("list"))}
-            disabled={mode === "list"}
-          >
-            List
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch(setMode("search"))}
-            disabled={mode === "search"}
-          >
-            Search
-          </button>
-        </div>
-
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <button type="button" onClick={onRefresh} disabled={isLoading}>
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {mode === "search" && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ marginBottom: 8 }}>
-            <strong>Search</strong> (JSON body)
-          </div>
-          <textarea
-            value={searchJson}
-            onChange={(e) => dispatch(setSearchJson(e.target.value))}
-            rows={10}
-            style={{ width: "100%", fontFamily: "monospace" }}
-            placeholder='{\n  "model": "Acurite-Tower"\n}'
-          />
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button type="button" onClick={onRunSearch} disabled={isSearching}>
-              Search
-            </button>
+      <PageHeader
+        title={t("models:title")}
+        isBusy={isLoading || isFetching || searchState.isLoading}
+        actions={
+          <>
             <button
               type="button"
-              onClick={() => dispatch(clearSearch())}
-              disabled={isSearching}
+              onClick={() => refetch()}
+              disabled={isLoading || isFetching}
             >
-              Reset
+              {t("common:actions.refresh")}
             </button>
+          </>
+        }
+      />
+
+      {/* Search (advanced) */}
+      <div style={{ marginTop: 12 }}>
+        <details>
+          <summary style={{ cursor: "pointer" }}>
+            {t("models:search.title")}
+          </summary>
+          <div style={{ marginTop: 10 }}>
+            <div style={{ opacity: 0.8, marginBottom: 8 }}>
+              {t("models:search.hint")}
+            </div>
+
+            <form onSubmit={onSubmitSearch}>
+              <textarea
+                value={searchJson}
+                onChange={(e) => setSearchJson(e.target.value)}
+                placeholder='{"model":"Acurite-Tower"}'
+                rows={6}
+                style={{ width: "100%", fontFamily: "monospace" }}
+              />
+
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button
+                  type="submit"
+                  disabled={searchState.isLoading || !searchJson.trim()}
+                >
+                  {t("models:search.submit")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchJson("")}
+                  disabled={searchState.isLoading}
+                >
+                  {t("models:search.reset")}
+                </button>
+              </div>
+
+              {searchState.isError ? (
+                <ErrorPanel
+                  message={t("common:errors.generic")}
+                  error={searchState.error}
+                />
+              ) : null}
+            </form>
           </div>
+        </details>
+      </div>
 
-          {searchError && (
-            <div style={{ marginTop: 8, color: "crimson" }}>{searchError}</div>
-          )}
-        </div>
-      )}
+      {isError ? (
+        <ErrorPanel message={t("common:errors.generic")} error={error} />
+      ) : null}
 
-      {mode === "list" && listQuery.isError && (
-        <div style={{ color: "crimson", marginBottom: 12 }}>
-          Failed to load models.
-        </div>
-      )}
+      {!isLoading && !isError && rows.length === 0 ? (
+        <EmptyState>{t("models:list.empty")}</EmptyState>
+      ) : null}
 
-      {isLoading ? (
-        <div>Loading...</div>
-      ) : items.length === 0 ? (
-        <div>No models found.</div>
-      ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={th}>Model</th>
-              <th style={th}>Fingerprint</th>
-              <th style={th}>Category</th>
-              <th style={th}>Source</th>
-              <th style={th}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((m) => (
-              <tr key={`${m.model}:${m.fingerprint}`}>
-                <td style={td}>{m.model}</td>
-                <td style={td} title={m.fingerprint}>
-                  <code>{m.fingerprint}</code>
-                </td>
-                <td style={td}>{m.category ?? ""}</td>
-                <td style={td}>{m.source ?? ""}</td>
-                <td style={td}>
-                  <Link
-                    to={`/models/${encodeURIComponent(
-                      m.model
-                    )}/${encodeURIComponent(m.fingerprint)}`}
-                  >
-                    Details
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {!isLoading && !isError && rows.length > 0 ? (
+        <DataTable<ModelSummary>
+          columns={columns}
+          rows={rows}
+          keyForRow={modelKey}
+        />
+      ) : null}
     </div>
   );
 }
-
-const th: React.CSSProperties = {
-  textAlign: "left",
-  borderBottom: "1px solid #ddd",
-  padding: "8px 6px",
-};
-
-const td: React.CSSProperties = {
-  borderBottom: "1px solid #eee",
-  padding: "8px 6px",
-  verticalAlign: "top",
-};

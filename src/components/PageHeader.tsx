@@ -1,20 +1,27 @@
-// src/components/PageHeader.tsx
 import React from "react";
 
-type Props = {
+type PageHeaderProps = {
   title: React.ReactNode;
   actions?: React.ReactNode;
-  loading?: boolean;
+  isBusy?: boolean;
+  busyText?: string;
 };
 
-export function PageHeader({ title, actions, loading }: Props) {
+export function PageHeader({
+  title,
+  actions,
+  isBusy,
+  busyText = "Loading…",
+}: PageHeaderProps) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
       <h2 style={{ margin: 0 }}>{title}</h2>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {actions}
-        {loading && <span style={{ opacity: 0.7 }}>Loading…</span>}
-      </div>
+
+      {actions ? (
+        <div style={{ display: "flex", gap: 8 }}>{actions}</div>
+      ) : null}
+
+      {isBusy ? <span style={{ opacity: 0.7 }}>{busyText}</span> : null}
     </div>
   );
 }

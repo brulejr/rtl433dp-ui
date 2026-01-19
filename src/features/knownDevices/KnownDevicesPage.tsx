@@ -1,101 +1,94 @@
-import React from "react";
-import { useListKnownDevicesQuery } from "./knownDevicesApi";
+import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+import { useListKnownDevicesQuery, type KnownDevice } from "./knownDevicesApi";
+
+import {
+  PageHeader,
+  ErrorPanel,
+  EmptyState,
+  DataTable,
+  type DataColumn,
+} from "../../components";
+
+function safeString(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return String(v);
+}
+
+function rowKey(d: KnownDevice, idx: number): string {
+  // Prefer stable key fields if present
+  const model = safeString((d as any).model);
+  const deviceId = safeString((d as any).deviceId ?? (d as any).id);
+  const fp = safeString((d as any).fingerprint);
+  const key = [model, deviceId, fp].filter(Boolean).join(":");
+  return key || `row-${idx}`;
+}
 
 export function KnownDevicesPage() {
-  const {
-    data: devices = [],
-    isLoading,
-    isFetching,
-    isError,
-    error,
-    refetch,
-  } = useListKnownDevicesQuery();
+  const { t } = useTranslation(["common", "knownDevices"]);
 
-  if (isLoading) {
-    return <div style={{ padding: 16 }}>Loading...</div>;
-  }
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useListKnownDevicesQuery();
 
-  if (isError) {
-    return (
-      <div style={{ padding: 16 }}>
-        <div style={{ marginBottom: 8, fontWeight: 600 }}>
-          Failed to load known devices
-        </div>
-        <pre style={{ whiteSpace: "pre-wrap" }}>
-          {JSON.stringify(error, null, 2)}
-        </pre>
-        <button onClick={() => refetch()} style={{ marginTop: 12 }}>
-          Retry
-        </button>
-      </div>
-    );
-  }
+  // IMPORTANT: the backend envelope in your project is:
+  // { content: T, status: number, timestamp: string, messages: string[] }
+  // so rows should be data?.content (NOT data?.content?.content)
+  const rows = useMemo(() => data?.content ?? [], [data]);
+
+  const columns: Array<DataColumn<KnownDevice>> = [
+    { header: "Model", render: (d) => safeString((d as any).model) },
+    {
+      header: "Device ID",
+      render: (d) => safeString((d as any).deviceId ?? (d as any).id),
+    },
+    {
+      header: "Fingerprint",
+      render: (d) => safeString((d as any).fingerprint),
+    },
+    { header: "Name", render: (d) => safeString((d as any).name) },
+    { header: "Type", render: (d) => safeString((d as any).type) },
+    { header: "Area", render: (d) => safeString((d as any).area) },
+    { header: "Time", render: (d) => safeString((d as any).time) },
+  ];
+
+  // We only treat the initial load as blocking. Background fetching should not hide data.
+  const showEmpty = !isLoading && !isError && rows.length === 0;
 
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <h2 style={{ margin: 0 }}>Known Devices</h2>
-
-        <button onClick={() => refetch()} style={{ padding: "6px 10px" }}>
-          Refresh
-        </button>
-
-        {/* ✅ isFetching is *background* fetching; do NOT block the page on it */}
-        {isFetching ? (
-          <span style={{ opacity: 0.7, fontSize: 12 }}>Refreshing…</span>
-        ) : null}
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        {devices.length === 0 ? (
-          <div style={{ opacity: 0.8 }}>No known devices found.</div>
-        ) : (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              marginTop: 8,
-            }}
+      <PageHeader
+        title={t("knownDevices:title")}
+        isBusy={isLoading || isFetching}
+        actions={
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isLoading || isFetching}
           >
-            <thead>
-              <tr>
-                <th style={th}>Name</th>
-                <th style={th}>Area</th>
-                <th style={th}>Type</th>
-                <th style={th}>Model</th>
-                <th style={th}>Device ID</th>
-              </tr>
-            </thead>
-            <tbody>
-              {devices.map((d, idx) => (
-                <tr
-                  key={d.id ?? `${d.model ?? "m"}:${d.deviceId ?? "id"}:${idx}`}
-                >
-                  <td style={td}>{String(d.name ?? "")}</td>
-                  <td style={td}>{String(d.area ?? "")}</td>
-                  <td style={td}>{String(d.deviceType ?? "")}</td>
-                  <td style={td}>{String(d.model ?? "")}</td>
-                  <td style={td}>{String(d.deviceId ?? "")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+            {t("common:actions.refresh")}
+          </button>
+        }
+      />
+
+      {isError ? (
+        <ErrorPanel message={t("common:errors.generic")} error={error} />
+      ) : null}
+
+      {showEmpty ? (
+        <EmptyState>{t("knownDevices:list.empty")}</EmptyState>
+      ) : null}
+
+      {/* Key part: if we have rows, render them even if isFetching is true */}
+      {!isError && rows.length > 0 ? (
+        <DataTable<KnownDevice>
+          rows={rows}
+          columns={columns}
+          keyForRow={rowKey}
+        />
+      ) : null}
     </div>
   );
 }
 
-const th: React.CSSProperties = {
-  textAlign: "left",
-  padding: "8px 10px",
-  borderBottom: "1px solid #ddd",
-  fontWeight: 600,
-  fontSize: 13,
-};
-
-const td: React.CSSProperties = {
-  padding: "8px 10px",
-  borderBottom: "1px solid #eee",
-  fontSize: 13,
-};
+export default KnownDevicesPage;
