@@ -1,94 +1,171 @@
-import React, { useMemo } from "react";
-import { useTranslation } from "react-i18next";
-
-import { useListKnownDevicesQuery, type KnownDevice } from "./knownDevicesApi";
-
+// src/features/knownDevices/KnownDevicesPage.tsx
+import * as React from "react";
 import {
-  PageHeader,
-  ErrorPanel,
-  EmptyState,
-  DataTable,
-  type DataColumn,
-} from "../../components";
+  Box,
+  Button,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
-function safeString(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  return String(v);
-}
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 
-function rowKey(d: KnownDevice, idx: number): string {
-  // Prefer stable key fields if present
-  const model = safeString((d as any).model);
-  const deviceId = safeString((d as any).deviceId ?? (d as any).id);
-  const fp = safeString((d as any).fingerprint);
-  const key = [model, deviceId, fp].filter(Boolean).join(":");
-  return key || `row-${idx}`;
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import {
+  fetchKnownDevices,
+  selectKnownDevicesItems,
+  selectKnownDevicesStatus,
+  type KnownDevice,
+} from "./knownDevicesDataSlice";
+import {
+  clearSelection,
+  selectKnownDevice,
+  selectKnownDevicesFilterText,
+  selectKnownDevicesSelectedKey,
+  setFilterText,
+} from "./knownDevicesSlice";
+
+function getRowKey(d: KnownDevice): string {
+  if (d.key) return d.key;
+  const model = (d.model ?? "").toString();
+  const id = (d.id ?? "").toString();
+  const fallback = `${model}:${id}`;
+  return fallback !== ":" ? fallback : JSON.stringify(d);
 }
 
 export function KnownDevicesPage() {
-  const { t } = useTranslation(["common", "knownDevices"]);
+  const dispatch = useAppDispatch();
 
-  const { data, isLoading, isFetching, isError, error, refetch } =
-    useListKnownDevicesQuery();
+  const items = useAppSelector(selectKnownDevicesItems);
+  const status = useAppSelector(selectKnownDevicesStatus);
 
-  // IMPORTANT: the backend envelope in your project is:
-  // { content: T, status: number, timestamp: string, messages: string[] }
-  // so rows should be data?.content (NOT data?.content?.content)
-  const rows = useMemo(() => data?.content ?? [], [data]);
+  const filterText = useAppSelector(selectKnownDevicesFilterText);
+  const selectedKey = useAppSelector(selectKnownDevicesSelectedKey);
 
-  const columns: Array<DataColumn<KnownDevice>> = [
-    { header: "Model", render: (d) => safeString((d as any).model) },
-    {
-      header: "Device ID",
-      render: (d) => safeString((d as any).deviceId ?? (d as any).id),
-    },
-    {
-      header: "Fingerprint",
-      render: (d) => safeString((d as any).fingerprint),
-    },
-    { header: "Name", render: (d) => safeString((d as any).name) },
-    { header: "Type", render: (d) => safeString((d as any).type) },
-    { header: "Area", render: (d) => safeString((d as any).area) },
-    { header: "Time", render: (d) => safeString((d as any).time) },
-  ];
+  const loading = status === "loading";
 
-  // We only treat the initial load as blocking. Background fetching should not hide data.
-  const showEmpty = !isLoading && !isError && rows.length === 0;
+  React.useEffect(() => {
+    dispatch(fetchKnownDevices());
+  }, [dispatch]);
+
+  const rows = React.useMemo(() => {
+    const f = (filterText ?? "").trim().toLowerCase();
+    if (!f) return items;
+
+    return items.filter((d) => {
+      const hay = [
+        d.model,
+        d.id,
+        d.name,
+        d.deviceType,
+        d.area,
+        d.lastSeen,
+        d.rssi,
+        d.freq,
+      ]
+        .filter((x) => x !== null && x !== undefined)
+        .join(" ")
+        .toLowerCase();
+
+      return hay.includes(f);
+    });
+  }, [items, filterText]);
+
+  // ✅ Auto-clear selection if it’s no longer in the visible rows (e.g., filtered out)
+  React.useEffect(() => {
+    if (!selectedKey) return;
+
+    const visibleIds = new Set(rows.map(getRowKey));
+    if (!visibleIds.has(String(selectedKey))) {
+      dispatch(clearSelection());
+    }
+  }, [dispatch, rows, selectedKey]);
+
+  const columns = React.useMemo<GridColDef<KnownDevice>[]>(
+    () => [
+      { field: "model", headerName: "Model", flex: 1, minWidth: 160 },
+      { field: "deviceId", headerName: "Device ID", flex: 1, minWidth: 140 },
+      { field: "name", headerName: "Name", flex: 1, minWidth: 160 },
+      { field: "type", headerName: "Type", flex: 1, minWidth: 140 },
+      { field: "area", headerName: "Area", flex: 1, minWidth: 140 },
+      { field: "time", headerName: "Last Seen", flex: 1, minWidth: 160 },
+      {
+        field: "rssi",
+        headerName: "RSSI",
+        flex: 0.6,
+        minWidth: 90,
+        type: "number",
+      },
+      {
+        field: "freq",
+        headerName: "Freq",
+        flex: 0.7,
+        minWidth: 100,
+        type: "number",
+      },
+    ],
+    [],
+  );
 
   return (
-    <div style={{ padding: 16 }}>
-      <PageHeader
-        title={t("knownDevices:title")}
-        isBusy={isLoading || isFetching}
-        actions={
-          <button
-            type="button"
-            onClick={() => refetch()}
-            disabled={isLoading || isFetching}
-          >
-            {t("common:actions.refresh")}
-          </button>
-        }
-      />
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="h4">Known Devices</Typography>
 
-      {isError ? (
-        <ErrorPanel message={t("common:errors.generic")} error={error} />
-      ) : null}
+        <Button
+          variant="contained"
+          startIcon={<RefreshIcon />}
+          onClick={() => dispatch(fetchKnownDevices())}
+        >
+          Refresh
+        </Button>
+      </Stack>
 
-      {showEmpty ? (
-        <EmptyState>{t("knownDevices:list.empty")}</EmptyState>
-      ) : null}
-
-      {/* Key part: if we have rows, render them even if isFetching is true */}
-      {!isError && rows.length > 0 ? (
-        <DataTable<KnownDevice>
-          rows={rows}
-          columns={columns}
-          keyForRow={rowKey}
+      <Stack direction="row" spacing={2} alignItems="center">
+        <TextField
+          label="Filter"
+          value={filterText}
+          onChange={(e) => dispatch(setFilterText(e.target.value))}
+          fullWidth
         />
-      ) : null}
-    </div>
+      </Stack>
+
+      <Paper sx={{ p: 2 }}>
+        <Box sx={{ width: "100%", height: 420, minWidth: 0 }}>
+          <DataGrid
+            rows={rows}
+            columns={columns}
+            getRowId={getRowKey}
+            loading={loading}
+            // ✅ Keep DataGrid’s selection system out of it (we do our own “selected” highlight)
+            rowSelection={false}
+            disableRowSelectionOnClick
+            hideFooterSelectedRowCount
+            onRowClick={(params) =>
+              dispatch(selectKnownDevice(String(params.id)))
+            }
+            getRowClassName={(params) =>
+              String(params.id) === String(selectedKey ?? "")
+                ? "rtl433dp-row-selected"
+                : ""
+            }
+            sx={{
+              "& .rtl433dp-row-selected": {
+                backgroundColor: "action.selected",
+              },
+              "& .rtl433dp-row-selected:hover": {
+                backgroundColor: "action.selected",
+              },
+            }}
+            initialState={{
+              pagination: { paginationModel: { pageSize: 100, page: 0 } },
+            }}
+            pageSizeOptions={[25, 50, 100]}
+          />
+        </Box>
+      </Paper>
+    </Box>
   );
 }
-
-export default KnownDevicesPage;

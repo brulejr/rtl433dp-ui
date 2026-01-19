@@ -1,29 +1,68 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
-import { useAuth } from "../../auth/AuthProvider";
+import * as React from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Stack,
+  Typography,
+} from "@mui/material";
+import LoginIcon from "@mui/icons-material/Login";
+
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { startLogin } from "../session/sessionThunks";
+import {
+  selectIsAuthenticated,
+  selectIsLoading,
+} from "../session/sessionSlice";
+import { Navigate, useLocation } from "react-router-dom";
 
 export function LoginPage() {
-  const { t } = useTranslation(["common"]);
-  const { login, user, isLoading } = useAuth();
+  const dispatch = useAppDispatch();
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const isLoading = useAppSelector(selectIsLoading);
+  const location = useLocation();
 
-  React.useEffect(() => {
-    if (!isLoading && user) {
-      // already signed in; basic redirect to home
-      window.location.href = "/";
-    }
-  }, [isLoading, user]);
+  // If user is already authed, bounce them into the app
+  const from = (location.state as any)?.from ?? "/known-devices";
+  if (isAuthenticated) return <Navigate to={from} replace />;
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 16 }}>
-      <div style={{ width: "min(540px, 100%)", padding: 16, borderRadius: 16, border: "1px solid rgba(0,0,0,0.08)" }}>
-        <h2 style={{ marginTop: 0 }}>{t("common:appTitle")}</h2>
-        <p style={{ opacity: 0.8, marginTop: 0 }}>
-          OIDC login is required to access the UI.
-        </p>
-        <button onClick={() => login()} style={{ padding: "10px 12px", borderRadius: 10 }}>
-          {t("common:auth.login")}
-        </button>
-      </div>
-    </div>
+    <Card>
+      <CardContent>
+        <Stack spacing={2.5}>
+          <Box>
+            <Typography variant="h5">rtl433dp</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Sign in to view and manage your devices.
+            </Typography>
+          </Box>
+
+          <Alert severity="info">
+            You must sign in before accessing the application.
+          </Alert>
+
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<LoginIcon />}
+            disabled={isLoading}
+            onClick={() => {
+              dispatch(startLogin())
+                .unwrap()
+                .catch((e) => console.error("Login failed:", e));
+            }}
+          >
+            Sign in
+          </Button>
+
+          <Typography variant="caption" color="text.secondary">
+            You’ll be redirected to your identity provider and then returned
+            here.
+          </Typography>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }

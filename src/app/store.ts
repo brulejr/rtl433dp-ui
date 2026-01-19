@@ -7,6 +7,7 @@ import sessionReducer from "../features/session/sessionSlice";
 import toastsReducer from "../features/toasts/toastsSlice";
 
 import knownDevicesReducer from "../features/knownDevices/knownDevicesSlice";
+import knownDevicesDataReducer from "../features/knownDevices/knownDevicesDataSlice";
 import modelsReducer from "../features/models/modelsSlice";
 import recommendationsUiReducer from "../features/recommendations/recommendationsSlice";
 
@@ -22,6 +23,7 @@ export const store = configureStore({
 
     // feature slices
     knownDevices: knownDevicesReducer,
+    knownDevicesData: knownDevicesDataReducer,
     models: modelsReducer,
     recommendationsUi: recommendationsUiReducer,
 
