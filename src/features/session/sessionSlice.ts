@@ -1,6 +1,8 @@
+// src/features/session/sessionSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { RootState } from "../../app/store";
 
-export type SessionProfile = {
+type SessionProfile = {
   sub?: string;
   preferred_username?: string;
   name?: string;
@@ -28,9 +30,23 @@ const initialState: SessionState = {
 
 export type SetSessionPayload = {
   accessToken: string | null;
-  profile: SessionState["profile"];
+  profile: SessionProfile | null;
   permissions: string[];
 };
+
+function applySignedOut(state: SessionState) {
+  state.isAuthenticated = false;
+  state.accessToken = null;
+  state.profile = null;
+  state.permissions = [];
+}
+
+function applySignedIn(state: SessionState, payload: SetSessionPayload) {
+  state.isAuthenticated = !!payload.accessToken;
+  state.accessToken = payload.accessToken;
+  state.profile = payload.profile;
+  state.permissions = payload.permissions ?? [];
+}
 
 const sessionSlice = createSlice({
   name: "session",
@@ -40,32 +56,54 @@ const sessionSlice = createSlice({
       state.isLoading = action.payload;
     },
 
-    // keep for backwards-compat with existing code
-    clearSession(state) {
-      state.isAuthenticated = false;
-      state.accessToken = null;
-      state.profile = null;
-      state.permissions = [];
-    },
-
-    // new: explicit action name used by baseApi 401 handling
-    signedOut(state) {
-      state.isAuthenticated = false;
-      state.accessToken = null;
-      state.profile = null;
-      state.permissions = [];
-    },
-
+    // Back-compat name (some code may already use this)
     setSession(state, action: PayloadAction<SetSessionPayload>) {
-      state.isAuthenticated = !!action.payload.accessToken;
-      state.accessToken = action.payload.accessToken;
-      state.profile = action.payload.profile;
-      state.permissions = action.payload.permissions;
+      applySignedIn(state, action.payload);
+    },
+
+    // Preferred semantic name (some code may import this)
+    signedIn(state, action: PayloadAction<SetSessionPayload>) {
+      applySignedIn(state, action.payload);
+    },
+
+    // Back-compat name (some code may already use this)
+    clearSession(state) {
+      applySignedOut(state);
+    },
+
+    // Preferred semantic name (your code referenced this)
+    signedOut(state) {
+      applySignedOut(state);
     },
   },
 });
 
-export const { setLoading, clearSession, signedOut, setSession } =
+export const { setLoading, setSession, signedIn, clearSession, signedOut } =
   sessionSlice.actions;
 
 export default sessionSlice.reducer;
+
+/**
+ * Selectors
+ */
+export const selectSession = (s: RootState) => s.session;
+
+export const selectIsLoading = (s: RootState) => s.session.isLoading;
+export const selectIsAuthenticated = (s: RootState) => s.session.isAuthenticated;
+
+export const selectAccessToken = (s: RootState) => s.session.accessToken;
+export const selectProfile = (s: RootState) => s.session.profile;
+
+export const selectPermissions = (s: RootState) => s.session.permissions;
+
+/**
+ * Curried selector:
+ *   useAppSelector(selectHasPermission("recommendation:promote"))
+ */
+export const selectHasPermission =
+  (permission: string) =>
+  (s: RootState): boolean => {
+    const p = (permission ?? "").trim();
+    if (!p) return false;
+    return s.session.permissions.includes(p);
+  };
