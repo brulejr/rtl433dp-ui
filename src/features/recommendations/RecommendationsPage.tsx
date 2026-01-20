@@ -1,12 +1,28 @@
 // src/features/recommendations/RecommendationsPage.tsx
-import React, { useMemo } from "react";
+import * as React from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
+
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import {
-  useListRecommendationsQuery,
-  usePromoteRecommendationMutation,
-  type RecommendationCandidate,
-} from "./recommendationsApi";
+import { useAuth } from "../../auth/AuthProvider";
+
+import type { RecommendationCandidate } from "./recommendationsApi";
 import {
   closePromote,
   openPromote,
@@ -15,41 +31,101 @@ import {
   selectSelectedCandidate,
   setPromoteField,
 } from "./recommendationsSlice";
-import { selectHasPermission } from "../session/sessionSlice";
+
+import {
+  fetchRecommendations,
+  promoteRecommendation,
+  selectRecommendationsError,
+  selectRecommendationsItems,
+  selectRecommendationsPromoteError,
+  selectRecommendationsPromoteStatus,
+  selectRecommendationsStatus,
+} from "./recommendationsDataSlice";
 
 function safeString(v: unknown): string {
   if (v === null || v === undefined) return "";
   return String(v);
 }
 
-function candidateKey(c: RecommendationCandidate, idx: number): string {
-  // prefer stable identity if present
+function getRowKey(c: RecommendationCandidate): string {
   const model = safeString(c.model);
   const id = safeString(c.id);
   const fp = safeString(c.fingerprint);
   const key = [model, id, fp].filter(Boolean).join(":");
-  return key || `row-${idx}`;
+  return key || JSON.stringify(c);
 }
 
 export function RecommendationsPage() {
   const { t } = useTranslation(["common", "recommendations"]);
-
   const dispatch = useAppDispatch();
+  const auth = useAuth();
+
+  // ✅ Permission gate like ModelsPage
+  const canList = auth.hasPermission("recommendation:list");
+  const canPromote = auth.hasPermission("recommendation:promote");
+
+  // data slice
+  const items = useAppSelector(selectRecommendationsItems);
+  const status = useAppSelector(selectRecommendationsStatus);
+  const error = useAppSelector(selectRecommendationsError);
+
+  const promoteStatus = useAppSelector(selectRecommendationsPromoteStatus);
+  const promoteError = useAppSelector(selectRecommendationsPromoteError);
+
+  // ui slice
   const promoteOpen = useAppSelector(selectPromoteOpen);
   const selected = useAppSelector(selectSelectedCandidate);
   const promoteForm = useAppSelector(selectPromoteForm);
 
-  // ✅ Permission gate (no hook import needed)
-  const canPromote = useAppSelector(
-    selectHasPermission("recommendation:promote")
-  );
+  const loading = status === "loading";
+  const promoting = promoteStatus === "loading";
 
-  const { data, isLoading, isFetching, isError, error, refetch } =
-    useListRecommendationsQuery();
+  // local filter + manual highlight (matches KnownDevices)
+  const [filterText, setFilterTextLocal] = React.useState("");
+  const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
 
-  const [promote, promoteState] = usePromoteRecommendationMutation();
+  // initial load
+  React.useEffect(() => {
+    if (!canList) return;
+    dispatch(fetchRecommendations());
+  }, [dispatch, canList]);
 
-  const rows = useMemo(() => data?.content ?? [], [data]);
+  const rows = React.useMemo(() => {
+    const f = (filterText ?? "").trim().toLowerCase();
+    if (!f) return items;
+
+    return items.filter((c) => {
+      const hay = [
+        c.source,
+        c.model,
+        c.id,
+        c.deviceId,
+        c.fingerprint,
+        c.weight,
+        c.frequency,
+        c.rssi,
+        c.lastSeen,
+        c.time,
+      ]
+        .filter((x) => x !== null && x !== undefined)
+        .join(" ")
+        .toLowerCase();
+
+      return hay.includes(f);
+    });
+  }, [items, filterText]);
+
+  // auto-clear selection if filtered out
+  React.useEffect(() => {
+    if (!selectedKey) return;
+    const visible = new Set(rows.map(getRowKey));
+    if (!visible.has(String(selectedKey))) setSelectedKey(null);
+  }, [rows, selectedKey]);
+
+  const onRefresh = () => {
+    if (!canList) return;
+    dispatch(fetchRecommendations());
+  };
 
   const onOpenPromote = (c: RecommendationCandidate) => {
     if (!canPromote) return;
@@ -61,271 +137,244 @@ export function RecommendationsPage() {
   const onSubmitPromote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canPromote) return;
+    if (!selected?.model) return;
 
-    if (!selected?.model || selected.id === undefined || selected.id === null)
-      return;
+    // ✅ backend expects deviceId (not "id")
+    const deviceId = selected.deviceId ?? selected.id;
+    if (deviceId === undefined || deviceId === null) return;
 
-    await promote({
-      model: selected.model,
-      id: selected.id,
-      fingerprint: selected.fingerprint,
-      name: promoteForm.name.trim(),
-      area: promoteForm.area.trim(),
-      deviceType: promoteForm.deviceType.trim(),
-    }).unwrap();
+    const res = await dispatch(
+      promoteRecommendation({
+        model: selected.model,
+        deviceId,
+        fingerprint: selected.fingerprint,
+        name: promoteForm.name.trim(),
+        area: promoteForm.area.trim(),
+        deviceType: promoteForm.deviceType.trim(),
+      }),
+    );
 
-    dispatch(closePromote());
+    if (promoteRecommendation.fulfilled.match(res)) {
+      dispatch(closePromote());
+    }
   };
 
+  const columns = React.useMemo<GridColDef<RecommendationCandidate>[]>(
+    () => [
+      { field: "model", headerName: "Model", flex: 1, minWidth: 160 },
+      { field: "id", headerName: "ID", flex: 0.7, minWidth: 130 },
+
+      // ✅ FIX: MUI DataGrid valueGetter signature is (value, row, column, apiRef)
+      {
+        field: "weight",
+        headerName: "Weight",
+        flex: 0.6,
+        minWidth: 110,
+        type: "number",
+        valueGetter: (_value, row) => row?.weight ?? null,
+      },
+      {
+        field: "rssi",
+        headerName: "RSSI",
+        flex: 0.6,
+        minWidth: 90,
+        type: "number",
+        valueGetter: (_value, row) => row?.signalStrengthDbm ?? null,
+      },
+      {
+        field: "frequency",
+        headerName: "Freq",
+        flex: 0.7,
+        minWidth: 100,
+        type: "number",
+        valueGetter: (_value, row) => row?.bucketCount ?? null,
+      },
+      {
+        field: "lastSeen",
+        headerName: "Last Seen",
+        flex: 1,
+        minWidth: 160,
+        valueGetter: (_value, row) => row?.lastSeen ?? row?.time ?? "",
+      },
+
+      {
+        field: "__actions",
+        headerName: "",
+        sortable: false,
+        filterable: false,
+        width: 170,
+        align: "right",
+        headerAlign: "right",
+        renderCell: (params) => {
+          if (!canPromote) return null;
+
+          const c = params.row as RecommendationCandidate;
+          const disabled = !c.model || c.id === undefined || c.id === null;
+
+          return (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<SystemUpdateAltIcon />}
+              onClick={() => onOpenPromote(c)}
+              disabled={disabled}
+            >
+              {t("common:actions.promote")}
+            </Button>
+          );
+        },
+      },
+    ],
+    [canPromote, t],
+  );
+
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <h2 style={{ margin: 0 }}>{t("recommendations:title")}</h2>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="h4">{t("recommendations:title")}</Typography>
 
-        <button
-          type="button"
-          onClick={() => refetch()}
-          disabled={isLoading || isFetching}
+        <Button
+          variant="contained"
+          startIcon={<RefreshIcon />}
+          onClick={onRefresh}
+          disabled={!canList || loading}
         >
-          {t("common:actions.refresh")}
-        </button>
+          Refresh
+        </Button>
+      </Stack>
 
-        {(isLoading || isFetching) && (
-          <span style={{ opacity: 0.7 }}>Loading…</span>
-        )}
-      </div>
-
-      {isError && (
-        <div style={{ marginTop: 12, color: "crimson" }}>
-          {t("common:errors.generic")}
-          <pre style={{ whiteSpace: "pre-wrap" }}>
-            {JSON.stringify(error, null, 2)}
-          </pre>
-        </div>
+      {!canList && (
+        <Alert severity="warning">
+          You do not have permission to view Recommendations. (Requires{" "}
+          <code>recommendation:list</code>)
+        </Alert>
       )}
 
-      {!isLoading && !isError && rows.length === 0 && (
-        <div style={{ marginTop: 12 }}>{t("recommendations:list.empty")}</div>
-      )}
+      {!!error && <Alert severity="error">{error}</Alert>}
 
-      {!isLoading && !isError && rows.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  Model
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  ID
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  Weight
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  RSSI
-                </th>
-                <th
-                  style={{
-                    textAlign: "left",
-                    borderBottom: "1px solid #ddd",
-                    padding: 8,
-                  }}
-                >
-                  Frequency
-                </th>
-                <th style={{ borderBottom: "1px solid #ddd", padding: 8 }} />
-              </tr>
-            </thead>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <TextField
+          label="Filter"
+          value={filterText}
+          onChange={(e) => setFilterTextLocal(e.target.value)}
+          fullWidth
+          disabled={!canList}
+        />
+      </Stack>
 
-            <tbody>
-              {rows.map((c, idx) => (
-                <tr key={candidateKey(c, idx)}>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {safeString(c.model)}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {safeString(c.id)}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {c.weight ?? ""}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {c.rssi ?? ""}
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #f0f0f0" }}>
-                    {c.frequency ?? ""}
-                  </td>
-
-                  <td
-                    style={{
-                      padding: 8,
-                      borderBottom: "1px solid #f0f0f0",
-                      textAlign: "right",
-                    }}
-                  >
-                    {/* ✅ Only show Promote if permitted */}
-                    {canPromote && (
-                      <button
-                        type="button"
-                        onClick={() => onOpenPromote(c)}
-                        disabled={
-                          !c.model || c.id === undefined || c.id === null
-                        }
-                      >
-                        {t("common:actions.promote")}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Promote dialog (only render when permitted) */}
-      {canPromote && promoteOpen && selected && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.35)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-          }}
-          onClick={onClosePromote}
-        >
-          <div
-            style={{
-              width: "min(640px, 100%)",
-              background: "white",
-              borderRadius: 8,
-              padding: 16,
+      <Paper sx={{ p: 2 }}>
+        <Box sx={{ width: "100%", height: 420, minWidth: 0 }}>
+          <DataGrid
+            rows={canList ? rows : []}
+            columns={columns}
+            getRowId={getRowKey}
+            loading={canList && loading}
+            rowSelection={false}
+            disableRowSelectionOnClick
+            hideFooterSelectedRowCount
+            onRowClick={(params) => setSelectedKey(String(params.id))}
+            onRowDoubleClick={(params) => onOpenPromote(params.row)}
+            getRowClassName={(params) =>
+              String(params.id) === String(selectedKey ?? "")
+                ? "rtl433dp-row-selected"
+                : ""
+            }
+            sx={{
+              "& .rtl433dp-row-selected": {
+                backgroundColor: "action.selected",
+              },
+              "& .rtl433dp-row-selected:hover": {
+                backgroundColor: "action.selected",
+              },
             }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ marginTop: 0 }}>
-              {t("recommendations:promote.title")}
-            </h3>
+            initialState={{
+              pagination: { paginationModel: { pageSize: 100, page: 0 } },
+              sorting: { sortModel: [{ field: "weight", sort: "desc" }] },
+            }}
+            pageSizeOptions={[25, 50, 100]}
+          />
+        </Box>
+      </Paper>
 
-            <div style={{ marginBottom: 12, opacity: 0.8 }}>
+      {/* Promote dialog */}
+      {canPromote && promoteOpen && selected && (
+        <Dialog
+          open={promoteOpen}
+          onClose={onClosePromote}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>{t("recommendations:promote.title")}</DialogTitle>
+
+          <DialogContent>
+            <Box sx={{ mt: 1, mb: 2, opacity: 0.85 }}>
               <div>
                 <strong>Model:</strong> {safeString(selected.model)}
               </div>
               <div>
                 <strong>ID:</strong> {safeString(selected.id)}
               </div>
-            </div>
+            </Box>
 
-            <form onSubmit={onSubmitPromote}>
-              <div style={{ display: "grid", gap: 10 }}>
-                <label style={{ display: "grid", gap: 6 }}>
-                  <span>{t("recommendations:promote.name")}</span>
-                  <input
-                    value={promoteForm.name}
-                    onChange={(e) =>
-                      dispatch(
-                        setPromoteField({
-                          field: "name",
-                          value: e.target.value,
-                        })
-                      )
-                    }
-                    required
-                  />
-                </label>
+            <Box component="form" onSubmit={onSubmitPromote}>
+              <Stack spacing={2}>
+                <TextField
+                  label={t("recommendations:promote.name")}
+                  value={promoteForm.name}
+                  onChange={(e) =>
+                    dispatch(
+                      setPromoteField({ field: "name", value: e.target.value }),
+                    )
+                  }
+                  required
+                  fullWidth
+                  autoFocus
+                />
 
-                <label style={{ display: "grid", gap: 6 }}>
-                  <span>{t("recommendations:promote.area")}</span>
-                  <input
-                    value={promoteForm.area}
-                    onChange={(e) =>
-                      dispatch(
-                        setPromoteField({
-                          field: "area",
-                          value: e.target.value,
-                        })
-                      )
-                    }
-                    required
-                  />
-                </label>
+                <TextField
+                  label={t("recommendations:promote.area")}
+                  value={promoteForm.area}
+                  onChange={(e) =>
+                    dispatch(
+                      setPromoteField({ field: "area", value: e.target.value }),
+                    )
+                  }
+                  required
+                  fullWidth
+                />
 
-                <label style={{ display: "grid", gap: 6 }}>
-                  <span>{t("recommendations:promote.deviceType")}</span>
-                  <input
-                    value={promoteForm.deviceType}
-                    onChange={(e) =>
-                      dispatch(
-                        setPromoteField({
-                          field: "deviceType",
-                          value: e.target.value,
-                        })
-                      )
-                    }
-                    required
-                  />
-                </label>
-              </div>
+                <TextField
+                  label={t("recommendations:promote.deviceType")}
+                  value={promoteForm.deviceType}
+                  onChange={(e) =>
+                    dispatch(
+                      setPromoteField({
+                        field: "deviceType",
+                        value: e.target.value,
+                      }),
+                    )
+                  }
+                  required
+                  fullWidth
+                />
 
-              {promoteState.isError && (
-                <div style={{ marginTop: 12, color: "crimson" }}>
-                  {t("common:errors.generic")}
-                </div>
-              )}
+                {!!promoteError && (
+                  <Alert severity="error">{promoteError}</Alert>
+                )}
+              </Stack>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 8,
-                  marginTop: 16,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={onClosePromote}
-                  disabled={promoteState.isLoading}
-                >
+              <DialogActions sx={{ px: 0, mt: 2 }}>
+                <Button onClick={onClosePromote} disabled={promoting}>
                   {t("common:actions.cancel")}
-                </button>
-                <button type="submit" disabled={promoteState.isLoading}>
+                </Button>
+                <Button type="submit" variant="contained" disabled={promoting}>
                   {t("recommendations:promote.submit")}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+                </Button>
+              </DialogActions>
+            </Box>
+          </DialogContent>
+        </Dialog>
       )}
-    </div>
+    </Box>
   );
 }

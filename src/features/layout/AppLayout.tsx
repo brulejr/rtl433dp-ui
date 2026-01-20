@@ -26,6 +26,7 @@ import LoginIcon from "@mui/icons-material/Login";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import HubIcon from "@mui/icons-material/Hub";
+import RecommendIcon from "@mui/icons-material/Recommend";
 
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
@@ -75,6 +76,10 @@ export function AppLayout() {
       selectHasPermission("model:search")(s),
   );
 
+  const canSeeRecommendations = useAppSelector((s) =>
+    selectHasPermission("recommendation:list")(s),
+  );
+
   const displayName =
     profile?.preferred_username ?? profile?.name ?? profile?.email ?? "User";
 
@@ -117,8 +122,14 @@ export function AppLayout() {
   };
 
   const navItems: NavItem[] = [
-    { label: "Known Devices", to: "/known-devices", icon: <SensorsIcon /> },
     { label: "Models", to: "/models", icon: <HubIcon />, show: canSeeModels },
+    {
+      label: "Recommendations",
+      to: "/recommendations",
+      icon: <RecommendIcon />,
+      show: canSeeRecommendations,
+    },
+    { label: "Known Devices", to: "/known-devices", icon: <SensorsIcon /> },
     { label: "Profile", to: "/profile", icon: <PersonIcon /> },
   ].filter((x) => x.show !== false);
 

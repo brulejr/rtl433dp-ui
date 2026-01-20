@@ -11,6 +11,7 @@ import knownDevicesDataReducer from "../features/knownDevices/knownDevicesDataSl
 import modelsReducer from "../features/models/modelsSlice";
 import modelsDataReducer from "../features/models/modelsDataSlice";
 import recommendationsUiReducer from "../features/recommendations/recommendationsSlice";
+import recommendationsDataReducer from "../features/recommendations/recommendationsDataSlice";
 
 import { baseApi } from "../services/api/baseApi";
 
@@ -28,6 +29,7 @@ export const store = configureStore({
     models: modelsReducer,
     modelsData: modelsDataReducer,
     recommendationsUi: recommendationsUiReducer,
+    recommendationsData: recommendationsDataReducer,
 
     // RTK Query
     [baseApi.reducerPath]: baseApi.reducer,

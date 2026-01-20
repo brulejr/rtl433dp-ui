@@ -11,6 +11,7 @@ import { LoginPage } from "../features/profile/LoginPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
 import { KnownDevicesPage } from "../features/knownDevices/KnownDevicesPage";
 import { ModelsPage } from "../features/models/ModelsPage";
+import { RecommendationsPage } from "../features/recommendations/RecommendationsPage";
 
 import { useAppSelector } from "./hooks";
 import { selectHasPermission } from "../features/session/sessionSelectors";
@@ -61,6 +62,15 @@ export const router = createBrowserRouter([
           },
 
           { path: "/profile", element: <ProfilePage /> },
+
+          {
+            path: "/recommendations",
+            element: (
+              <RequirePermission anyOf={["recommendation:list"]}>
+                <RecommendationsPage />
+              </RequirePermission>
+            ),
+          },
         ],
       },
     ],
