@@ -19,7 +19,7 @@ import { selectHasPermission } from "../features/session/sessionSelectors";
 function RequirePermission({
   anyOf,
   children,
-  fallback = <Navigate to="/known-devices" replace />,
+  fallback = <Navigate to="/profile" replace />,
 }: {
   anyOf: string[];
   children: React.ReactNode;
@@ -48,7 +48,7 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: "/", element: <Navigate to="/known-devices" replace /> },
+          { path: "/", element: <Navigate to="/profile" replace /> },
 
           { path: "/known-devices", element: <KnownDevicesPage /> },
 
