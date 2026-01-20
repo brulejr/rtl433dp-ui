@@ -25,6 +25,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import LoginIcon from "@mui/icons-material/Login";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import HubIcon from "@mui/icons-material/Hub";
 
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
@@ -35,6 +36,7 @@ import {
   selectProfile,
 } from "../session/sessionSlice";
 import { startLogin, startLogout } from "../session/sessionThunks";
+import { selectHasPermission } from "../session/sessionSelectors";
 
 const drawerWidthExpanded = 260;
 const drawerWidthCollapsed = 72;
@@ -42,12 +44,12 @@ const drawerWidthCollapsed = 72;
 // localStorage keys
 const LS_NAV_COLLAPSED = "uiNavCollapsed";
 
-type NavItem = { label: string; to: string; icon: React.ReactNode };
-
-const navItems: NavItem[] = [
-  { label: "Known Devices", to: "/known-devices", icon: <SensorsIcon /> },
-  { label: "Profile", to: "/profile", icon: <PersonIcon /> },
-];
+type NavItem = {
+  label: string;
+  to: string;
+  icon: React.ReactNode;
+  show?: boolean;
+};
 
 function safeReadBool(key: string, fallback: boolean): boolean {
   try {
@@ -66,6 +68,12 @@ export function AppLayout() {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const isLoading = useAppSelector(selectIsLoading);
   const profile = useAppSelector(selectProfile);
+
+  const canSeeModels = useAppSelector(
+    (s) =>
+      selectHasPermission("model:list")(s) ||
+      selectHasPermission("model:search")(s),
+  );
 
   const displayName =
     profile?.preferred_username ?? profile?.name ?? profile?.email ?? "User";
@@ -107,6 +115,12 @@ export function AppLayout() {
       .unwrap()
       .catch((e) => console.error("Logout failed:", e));
   };
+
+  const navItems: NavItem[] = [
+    { label: "Known Devices", to: "/known-devices", icon: <SensorsIcon /> },
+    { label: "Models", to: "/models", icon: <HubIcon />, show: canSeeModels },
+    { label: "Profile", to: "/profile", icon: <PersonIcon /> },
+  ].filter((x) => x.show !== false);
 
   const drawer = (
     <Box sx={{ height: "100%" }}>

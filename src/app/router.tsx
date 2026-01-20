@@ -1,3 +1,4 @@
+// src/app/router.tsx
 import * as React from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
@@ -9,6 +10,25 @@ import { AuthCallbackPage } from "../features/session/AuthCallbackPage";
 import { LoginPage } from "../features/profile/LoginPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
 import { KnownDevicesPage } from "../features/knownDevices/KnownDevicesPage";
+import { ModelsPage } from "../features/models/ModelsPage";
+
+import { useAppSelector } from "./hooks";
+import { selectHasPermission } from "../features/session/sessionSelectors";
+
+function RequirePermission({
+  anyOf,
+  children,
+  fallback = <Navigate to="/known-devices" replace />,
+}: {
+  anyOf: string[];
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}) {
+  const allowed = useAppSelector((s) =>
+    anyOf.some((p) => selectHasPermission(p)(s)),
+  );
+  return <>{allowed ? children : fallback}</>;
+}
 
 export const router = createBrowserRouter([
   // Public pages (NO application frame)
@@ -28,7 +48,18 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: "/", element: <Navigate to="/known-devices" replace /> },
+
           { path: "/known-devices", element: <KnownDevicesPage /> },
+
+          {
+            path: "/models",
+            element: (
+              <RequirePermission anyOf={["model:list", "model:search"]}>
+                <ModelsPage />
+              </RequirePermission>
+            ),
+          },
+
           { path: "/profile", element: <ProfilePage /> },
         ],
       },
