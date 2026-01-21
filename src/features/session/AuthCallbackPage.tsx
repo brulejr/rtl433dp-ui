@@ -21,7 +21,7 @@ export function AuthCallbackPage() {
         await dispatch(initSession()).unwrap();
 
         // Go to app
-        navigate("/known-devices", { replace: true });
+        navigate("/profile", { replace: true });
       } catch (e) {
         console.error("Auth callback failed:", e);
         navigate("/login", { replace: true });

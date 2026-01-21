@@ -25,7 +25,7 @@ export function LoginPage() {
   const location = useLocation();
 
   // If user is already authed, bounce them into the app
-  const from = (location.state as any)?.from ?? "/known-devices";
+  const from = (location.state as any)?.from ?? "/profile";
   if (isAuthenticated) return <Navigate to={from} replace />;
 
   return (
