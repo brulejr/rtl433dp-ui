@@ -21,6 +21,7 @@ import RestartAltIcon from "@mui/icons-material/RestartAlt";
 
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 
+import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { useAuth } from "../../auth/AuthProvider";
 
@@ -66,6 +67,7 @@ function getRowId(m: ModelSummary): string {
 }
 
 export function ModelsPage() {
+  const { t } = useTranslation(["common", "models"]);
   const dispatch = useAppDispatch();
   const auth = useAuth();
 
@@ -126,11 +128,21 @@ export function ModelsPage() {
 
   const columns = React.useMemo<GridColDef<ModelSummary>[]>(
     () => [
-      { field: "model", headerName: "Model", flex: 1, minWidth: 220 },
-      { field: "category", headerName: "Category", flex: 0.6, minWidth: 160 },
+      {
+        field: "model",
+        headerName: t("models:fields.modelName"),
+        flex: 1,
+        minWidth: 220,
+      },
+      {
+        field: "category",
+        headerName: t("models:fields.category"),
+        flex: 0.6,
+        minWidth: 160,
+      },
       {
         field: "fingerprint",
-        headerName: "Fingerprint",
+        headerName: t("models:fields.fingerprint"),
         flex: 1,
         minWidth: 280,
       },
@@ -171,15 +183,12 @@ export function ModelsPage() {
           onClick={onRefresh}
           disabled={!canList}
         >
-          Refresh
+          {t("models:list.refresh")}
         </Button>
       </Stack>
 
       {!canList && (
-        <Alert severity="warning">
-          You do not have permission to view Models. (Requires{" "}
-          <code>model:list</code>)
-        </Alert>
+        <Alert severity="warning">{t("models:errcode.MODL001")}</Alert>
       )}
 
       {!!error && <Alert severity="error">{error}</Alert>}
@@ -199,7 +208,7 @@ export function ModelsPage() {
           <Accordion disabled={!canSearch}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography sx={{ fontWeight: 600 }}>
-                Search (advanced)
+                {t("models:search.title")}
               </Typography>
             </AccordionSummary>
 

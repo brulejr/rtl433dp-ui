@@ -1,7 +1,8 @@
 {
   "title": "Models",
   "list": {
-    "empty": "No models found."
+    "empty": "No models found.",
+    "refresh": "Refresh"
   },
   "search": {
     "title": "Search",
@@ -15,6 +16,10 @@
   },
   "fields": {
     "modelName": "Model",
+    "category": "Category",
     "fingerprint": "Fingerprint"
+  },
+  "errorcode": {
+    "MODL001": "You do not have permission to view Models."
   }
 }
