@@ -91,20 +91,6 @@ export function KnownDevicesPage() {
       { field: "type", headerName: "Type", flex: 1, minWidth: 140 },
       { field: "area", headerName: "Area", flex: 1, minWidth: 140 },
       { field: "time", headerName: "Last Seen", flex: 1, minWidth: 160 },
-      {
-        field: "rssi",
-        headerName: "RSSI",
-        flex: 0.6,
-        minWidth: 90,
-        type: "number",
-      },
-      {
-        field: "freq",
-        headerName: "Freq",
-        flex: 0.7,
-        minWidth: 100,
-        type: "number",
-      },
     ],
     [],
   );
