@@ -17,9 +17,16 @@
   "fields": {
     "modelName": "Model",
     "category": "Category",
-    "fingerprint": "Fingerprint"
+    "fingerprint": "Fingerprint",
+    "sensors": "Sensors"
   },
   "errorcode": {
-    "MODL001": "You do not have permission to view Models."
+    "MODL001": "You do not have permission to view Models.",
+    "MODL002": "You do not have permission to view Model Details."
+  },
+  "messages": {
+    "loadingDetails": "Loading details…",
+    "noDetailsLoadedYet": "No details loaded yet.",
+    "selectModelForDetails": "Select a model to see details.",
   }
 }

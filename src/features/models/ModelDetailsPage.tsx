@@ -18,6 +18,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 
+import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 
 import {
@@ -66,6 +67,8 @@ export type ModelDetailsPageProps = {
 };
 
 export function ModelDetailsPage(props: ModelDetailsPageProps) {
+  const { t } = useTranslation(["common", "models"]);
+
   const { fingerprint, modelName, canGet, canUpdate, onClose } = props;
 
   const dispatch = useAppDispatch();
@@ -144,7 +147,7 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
 
       {!fingerprint && (
         <Typography variant="body2" color="text.secondary">
-          Select a model to see details.
+          {t("models:messages.selectModelForDetails")}
         </Typography>
       )}
 
@@ -155,10 +158,7 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
       )}
 
       {!!fingerprint && !!modelName && !canGet && (
-        <Alert severity="warning">
-          You do not have permission to view model details. (Requires{" "}
-          <code>model:get</code>)
-        </Alert>
+        <Alert severity="warning">{t("models:errorcode.MODL002")}</Alert>
       )}
 
       {!!fingerprint &&
@@ -166,7 +166,7 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
         canGet &&
         detailsStatus === "loading" && (
           <Typography variant="body2" color="text.secondary">
-            Loading details…
+            {t("models:messages.loadingDetails")}
           </Typography>
         )}
 
@@ -181,7 +181,7 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
         !details &&
         !detailsError && (
           <Typography variant="body2" color="text.secondary">
-            No details loaded yet.
+            {t("models:messages.noDetailsLoadedYet")}
           </Typography>
         )}
 
@@ -193,7 +193,7 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
           <>
             <Stack spacing={1}>
               <Typography variant="subtitle2" color="text.secondary">
-                Model
+                {t("models:fields.modelName")}
               </Typography>
               <Typography variant="body1" sx={{ fontWeight: 600 }}>
                 {details.model}
@@ -204,7 +204,7 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
                 color="text.secondary"
                 sx={{ mt: 1 }}
               >
-                Fingerprint
+                {t("models:fields.fingerprint")}
               </Typography>
               <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
                 {details.fingerprint}
@@ -219,25 +219,21 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
               justifyContent="space-between"
             >
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                Sensors
+                {t("models:fields.sensors")}
               </Typography>
 
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<SystemUpdateAltIcon />}
-                disabled={!canUpdate}
-                onClick={() => dispatch(setUpdateSensorsOpen(true))}
-              >
-                Update sensors
-              </Button>
+              {canUpdate && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<SystemUpdateAltIcon />}
+                  disabled={!canUpdate}
+                  onClick={() => dispatch(setUpdateSensorsOpen(true))}
+                >
+                  {t("models:details.updateSensors")}
+                </Button>
+              )}
             </Stack>
-
-            {!canUpdate && (
-              <Typography variant="caption" color="text.secondary">
-                Requires <code>model:update</code> permission.
-              </Typography>
-            )}
 
             <Box
               component="pre"
