@@ -30,6 +30,7 @@ import RecommendIcon from "@mui/icons-material/Recommend";
 
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
+import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
   selectIsAuthenticated,
@@ -63,6 +64,7 @@ function safeReadBool(key: string, fallback: boolean): boolean {
 }
 
 export function AppLayout() {
+  const { t } = useTranslation(["common"]);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
@@ -122,15 +124,24 @@ export function AppLayout() {
   };
 
   const navItems: NavItem[] = [
-    { label: "Models", to: "/models", icon: <HubIcon />, show: canSeeModels },
     {
-      label: "Recommendations",
+      label: t("common:nav.models"),
+      to: "/models",
+      icon: <HubIcon />,
+      show: canSeeModels,
+    },
+    {
+      label: t("common:nav.recommendations"),
       to: "/recommendations",
       icon: <RecommendIcon />,
       show: canSeeRecommendations,
     },
-    { label: "Known Devices", to: "/known-devices", icon: <SensorsIcon /> },
-    { label: "Profile", to: "/profile", icon: <PersonIcon /> },
+    {
+      label: t("common:nav.knownDevices"),
+      to: "/known-devices",
+      icon: <SensorsIcon />,
+    },
+    { label: t("common:nav.profile"), to: "/profile", icon: <PersonIcon /> },
   ].filter((x) => x.show !== false);
 
   const drawer = (
