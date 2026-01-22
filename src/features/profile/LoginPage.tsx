@@ -1,4 +1,4 @@
-import * as React from "react";
+// src/features/profile/LoginPage.tsx
 import {
   Alert,
   Box,
@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import LoginIcon from "@mui/icons-material/Login";
 
+import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { startLogin } from "../session/sessionThunks";
 import {
@@ -19,6 +20,7 @@ import {
 import { Navigate, useLocation } from "react-router-dom";
 
 export function LoginPage() {
+  const { t } = useTranslation(["common", "login"]);
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const isLoading = useAppSelector(selectIsLoading);
@@ -33,15 +35,13 @@ export function LoginPage() {
       <CardContent>
         <Stack spacing={2.5}>
           <Box>
-            <Typography variant="h5">rtl433dp</Typography>
+            <Typography variant="h5">{t("common:appTitle")}</Typography>
             <Typography variant="body2" color="text.secondary">
-              Sign in to view and manage your devices.
+              {t("login:title")}
             </Typography>
           </Box>
 
-          <Alert severity="info">
-            You must sign in before accessing the application.
-          </Alert>
+          <Alert severity="info">{t("login:messages.alert")}</Alert>
 
           <Button
             variant="contained"
@@ -54,12 +54,11 @@ export function LoginPage() {
                 .catch((e) => console.error("Login failed:", e));
             }}
           >
-            Sign in
+            {t("common:auth.login")}
           </Button>
 
           <Typography variant="caption" color="text.secondary">
-            You’ll be redirected to your identity provider and then returned
-            here.
+            {t("login:caption")}
           </Typography>
         </Stack>
       </CardContent>

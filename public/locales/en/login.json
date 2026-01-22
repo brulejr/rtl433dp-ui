@@ -1,0 +1,7 @@
+{
+    "title": "Sign in to view and manage your devices.",
+    "caption": "You’ll be redirected to your identity provider and then returned here.",
+    "messages": {
+        "alert": "You must sign in before accessing the application."
+    }
+}
