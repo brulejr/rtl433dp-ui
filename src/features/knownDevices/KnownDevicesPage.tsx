@@ -12,6 +12,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 
+import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
   fetchKnownDevices,
@@ -36,6 +37,7 @@ function getRowKey(d: KnownDevice): string {
 }
 
 export function KnownDevicesPage() {
+  const { t } = useTranslation(["common", "knownDevices"]);
   const dispatch = useAppDispatch();
 
   const items = useAppSelector(selectKnownDevicesItems);
@@ -85,12 +87,42 @@ export function KnownDevicesPage() {
 
   const columns = React.useMemo<GridColDef<KnownDevice>[]>(
     () => [
-      { field: "model", headerName: "Model", flex: 1, minWidth: 160 },
-      { field: "deviceId", headerName: "Device ID", flex: 1, minWidth: 140 },
-      { field: "name", headerName: "Name", flex: 1, minWidth: 160 },
-      { field: "type", headerName: "Type", flex: 1, minWidth: 140 },
-      { field: "area", headerName: "Area", flex: 1, minWidth: 140 },
-      { field: "time", headerName: "Last Seen", flex: 1, minWidth: 160 },
+      {
+        field: "model",
+        headerName: t("knownDevices:fields.model"),
+        flex: 1,
+        minWidth: 160,
+      },
+      {
+        field: "deviceId",
+        headerName: t("knownDevices:fields.deviceId"),
+        flex: 1,
+        minWidth: 140,
+      },
+      {
+        field: "name",
+        headerName: t("knownDevices:fields.name"),
+        flex: 1,
+        minWidth: 160,
+      },
+      {
+        field: "type",
+        headerName: t("knownDevices:fields.type"),
+        flex: 1,
+        minWidth: 140,
+      },
+      {
+        field: "area",
+        headerName: t("knownDevices:fields.area"),
+        flex: 1,
+        minWidth: 140,
+      },
+      {
+        field: "time",
+        headerName: t("knownDevices:fields.time"),
+        flex: 1,
+        minWidth: 160,
+      },
     ],
     [],
   );
@@ -105,13 +137,13 @@ export function KnownDevicesPage() {
           startIcon={<RefreshIcon />}
           onClick={() => dispatch(fetchKnownDevices())}
         >
-          Refresh
+          {t("common:actions.refresh")}
         </Button>
       </Stack>
 
       <Stack direction="row" spacing={2} alignItems="center">
         <TextField
-          label="Filter"
+          label={t("common:actions.filter")}
           value={filterText}
           onChange={(e) => dispatch(setFilterText(e.target.value))}
           fullWidth

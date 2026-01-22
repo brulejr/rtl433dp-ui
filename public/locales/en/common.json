@@ -15,7 +15,8 @@
     "refresh": "Refresh",
     "save": "Save",
     "cancel": "Cancel",
-    "promote": "Promote"
+    "promote": "Promote",
+    "filter": "Filter"
   },
   "errors": {
     "generic": "Something went wrong.",

@@ -254,7 +254,7 @@ export function RecommendationsPage() {
 
       <Stack direction="row" spacing={2} alignItems="center">
         <TextField
-          label="Filter"
+          label={t("common:actions.filter")}
           value={filterText}
           onChange={(e) => setFilterTextLocal(e.target.value)}
           fullWidth

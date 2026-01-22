@@ -197,7 +197,7 @@ export function ModelsPage() {
       <Paper sx={{ p: 2 }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <TextField
-            label="Filter"
+            label={t("common:actions.filter")}
             value={filterText}
             onChange={(e) => dispatch(setFilterText(e.target.value))}
             fullWidth
