@@ -27,6 +27,6 @@
   "messages": {
     "loadingDetails": "Loading details…",
     "noDetailsLoadedYet": "No details loaded yet.",
-    "selectModelForDetails": "Select a model to see details.",
+    "selectModelForDetails": "Select a model to see details."
   }
 }

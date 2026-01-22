@@ -1,4 +1,4 @@
-import * as React from "react";
+// src/features/profile/profilePage.tsx
 import {
   Alert,
   Avatar,
@@ -14,6 +14,7 @@ import {
 import LogoutIcon from "@mui/icons-material/Logout";
 import LoginIcon from "@mui/icons-material/Login";
 
+import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import {
   selectIsAuthenticated,
@@ -24,6 +25,7 @@ import {
 import { startLogin, startLogout } from "../session/sessionThunks";
 
 export function ProfilePage() {
+  const { t } = useTranslation(["common", "profile"]);
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const profile = useAppSelector(selectProfile);
@@ -35,25 +37,7 @@ export function ProfilePage() {
 
   return (
     <Stack spacing={2.5}>
-      <Typography variant="h5">Profile</Typography>
-
-      {!isAuthenticated ? (
-        <Alert
-          severity="info"
-          action={
-            <Button
-              color="inherit"
-              size="small"
-              startIcon={<LoginIcon />}
-              onClick={() => dispatch(startLogin())}
-            >
-              Login
-            </Button>
-          }
-        >
-          You are not signed in.
-        </Alert>
-      ) : null}
+      <Typography variant="h5">{t("profile:title")}</Typography>
 
       <Card>
         <CardContent>
@@ -85,27 +69,21 @@ export function ProfilePage() {
                 />
                 <Chip
                   size="small"
-                  label={`Permissions: ${permissions.length}`}
+                  label={t("profile:chips.permissions", {
+                    count: permissions.length,
+                  })}
                 />
               </Stack>
             </Box>
 
             <Stack direction="row" spacing={1}>
               <Button
-                variant="outlined"
-                startIcon={<LoginIcon />}
-                disabled={isAuthenticated}
-                onClick={() => dispatch(startLogin())}
-              >
-                Login
-              </Button>
-              <Button
                 variant="contained"
                 startIcon={<LogoutIcon />}
                 disabled={!isAuthenticated}
                 onClick={() => dispatch(startLogout())}
               >
-                Logout
+                {t("common:auth.logout")}
               </Button>
             </Stack>
           </Stack>
@@ -113,13 +91,13 @@ export function ProfilePage() {
           <Divider sx={{ my: 2 }} />
 
           <Stack spacing={1}>
-            <Row label="sub" value={profile?.sub} />
+            <Row label={t("profile:fields.sub")} value={profile?.sub} />
             <Row
-              label="preferred_username"
+              label={t("profile:fields.preferredUsername")}
               value={profile?.preferred_username}
             />
-            <Row label="name" value={profile?.name} />
-            <Row label="email" value={profile?.email} />
+            <Row label={t("profile:fields.name")} value={profile?.name} />
+            <Row label={t("profile:fields.email")} value={profile?.email} />
           </Stack>
         </CardContent>
       </Card>
@@ -128,11 +106,11 @@ export function ProfilePage() {
         <Card>
           <CardContent>
             <Typography variant="h6" sx={{ mb: 1 }}>
-              Debug
+              {t("profile:sections.debug")}
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Permissions
+              {t("profile:fields.permissions")}
             </Typography>
             <Box
               component="pre"
@@ -149,7 +127,7 @@ export function ProfilePage() {
             </Box>
 
             <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-              Access Token (preview)
+              {t("profile:fields.accessToken")}
             </Typography>
             <Box
               component="pre"
