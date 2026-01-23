@@ -1,4 +1,4 @@
-import * as React from "react";
+// src/features/layout/PublicLayout.tsx
 import { Outlet } from "react-router-dom";
 import { Box, Container } from "@mui/material";
 

@@ -8,14 +8,18 @@ import { router } from "./app/router";
 import { AuthProvider } from "./auth/AuthProvider";
 import { store } from "./app/store";
 
+import { ColorModeProvider } from "./components/ColorModeProvider";
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Suspense fallback={<div />}>
       <Provider store={store}>
         <AuthProvider>
-          <RouterProvider router={router} />
+          <ColorModeProvider>
+            <RouterProvider router={router} />
+          </ColorModeProvider>
         </AuthProvider>
       </Provider>
     </Suspense>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

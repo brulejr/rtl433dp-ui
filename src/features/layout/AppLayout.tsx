@@ -28,6 +28,8 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import HubIcon from "@mui/icons-material/Hub";
 import RecommendIcon from "@mui/icons-material/Recommend";
 import LanguageIcon from "@mui/icons-material/Language";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
@@ -42,6 +44,7 @@ import { startLogin, startLogout } from "../session/sessionThunks";
 import { selectHasPermission } from "../session/sessionSelectors";
 
 import { LanguageSwitcher } from "../../components/LanguageSwitcher";
+import { ColorModeContext } from "../../components/ColorModeProvider";
 
 const drawerWidthExpanded = 260;
 const drawerWidthCollapsed = 72;
@@ -70,6 +73,8 @@ export function AppLayout() {
   const { t } = useTranslation(["common"]);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+
+  const { mode, toggleColorMode } = React.useContext(ColorModeContext);
 
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const isLoading = useAppSelector(selectIsLoading);
@@ -144,7 +149,6 @@ export function AppLayout() {
       to: "/known-devices",
       icon: <SensorsIcon />,
     },
-    { label: t("common:nav.profile"), to: "/profile", icon: <PersonIcon /> },
   ].filter((x) => x.show !== false);
 
   const drawer = (
@@ -279,7 +283,10 @@ export function AppLayout() {
                     navigate("/profile");
                   }}
                 >
-                  Profile
+                  <ListItemIcon>
+                    <PersonIcon />
+                  </ListItemIcon>
+                  <ListItemText primary={t("common:nav.profile")} />
                 </MenuItem>
 
                 <Divider />
@@ -291,11 +298,33 @@ export function AppLayout() {
                   <LanguageSwitcher />
                 </MenuItem>
 
+                <MenuItem onClick={toggleColorMode}>
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    {mode === "dark" ? (
+                      <LightModeIcon fontSize="small" />
+                    ) : (
+                      <DarkModeIcon fontSize="small" />
+                    )}
+                  </ListItemIcon>
+                  <ListItemText primary={t("common:labels.theme")} />
+
+                  <Typography
+                    variant="body2"
+                    sx={{ color: "text.secondary", mr: 1 }}
+                  >
+                    {t(
+                      mode === "dark"
+                        ? "common:labels.dark"
+                        : "common:labels.light",
+                    )}
+                  </Typography>
+                </MenuItem>
+
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
                     <LogoutIcon fontSize="small" />
                   </ListItemIcon>
-                  Logout
+                  {t("common:auth.logout")}
                 </MenuItem>
               </>
             ) : (

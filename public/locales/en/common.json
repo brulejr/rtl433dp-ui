@@ -23,6 +23,9 @@
     "unauthorized": "You are not authorized to perform this action."
   },
   "labels": {
-    "language": "Language"
+    "language": "Language",
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light"
   }
 }
