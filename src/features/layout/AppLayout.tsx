@@ -27,6 +27,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import HubIcon from "@mui/icons-material/Hub";
 import RecommendIcon from "@mui/icons-material/Recommend";
+import LanguageIcon from "@mui/icons-material/Language";
 
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
@@ -39,6 +40,8 @@ import {
 } from "../session/sessionSlice";
 import { startLogin, startLogout } from "../session/sessionThunks";
 import { selectHasPermission } from "../session/sessionSelectors";
+
+import { LanguageSwitcher } from "../../components/LanguageSwitcher";
 
 const drawerWidthExpanded = 260;
 const drawerWidthCollapsed = 72;
@@ -233,7 +236,7 @@ export function AppLayout() {
           </Tooltip>
 
           <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
-            rtl433dp
+            {t("common:appTitle")}
           </Typography>
 
           <Tooltip
@@ -280,6 +283,13 @@ export function AppLayout() {
                 </MenuItem>
 
                 <Divider />
+
+                <MenuItem>
+                  <ListItemIcon>
+                    <LanguageIcon fontSize="small" />
+                  </ListItemIcon>
+                  <LanguageSwitcher />
+                </MenuItem>
 
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
