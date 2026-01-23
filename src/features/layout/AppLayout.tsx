@@ -27,7 +27,6 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import HubIcon from "@mui/icons-material/Hub";
 import RecommendIcon from "@mui/icons-material/Recommend";
-import LanguageIcon from "@mui/icons-material/Language";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 
@@ -43,7 +42,7 @@ import {
 import { startLogin, startLogout } from "../session/sessionThunks";
 import { selectHasPermission } from "../session/sessionSelectors";
 
-import { LanguageSwitcher } from "../../components/LanguageSwitcher";
+import { LanguageSwitcherMenuItem } from "../../components/LanguageSwitcherMenuItem";
 import { ColorModeContext } from "../../components/ColorModeProvider";
 
 const drawerWidthExpanded = 260;
@@ -291,12 +290,7 @@ export function AppLayout() {
 
                 <Divider />
 
-                <MenuItem>
-                  <ListItemIcon>
-                    <LanguageIcon fontSize="small" />
-                  </ListItemIcon>
-                  <LanguageSwitcher />
-                </MenuItem>
+                <LanguageSwitcherMenuItem />
 
                 <MenuItem onClick={toggleColorMode}>
                   <ListItemIcon sx={{ minWidth: 36 }}>
