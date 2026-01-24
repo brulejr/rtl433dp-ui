@@ -42,6 +42,7 @@ import {
   setSearchJson,
 } from "./modelsSlice";
 
+import { DataGridFilter } from "../../components/DataGridFilter";
 import { ModelsDataGrid } from "./ModelsDataGrid";
 import { ModelDetailsPage } from "./ModelDetailsPage";
 
@@ -161,11 +162,10 @@ export function ModelsPage() {
       {/* Search + Filter */}
       <Paper sx={{ p: 2 }}>
         <Stack direction="row" spacing={2} alignItems="center">
-          <TextField
-            label={t("common:actions.filter")}
-            value={filterText}
+          <DataGridFilter
+            canFilter={canList}
+            filterText={filterText}
             onChange={(e) => dispatch(setFilterText(e.target.value))}
-            fullWidth
           />
         </Stack>
 
