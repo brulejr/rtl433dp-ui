@@ -11,8 +11,6 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Menu,
-  MenuItem,
   Toolbar,
   Tooltip,
   Typography,
@@ -34,7 +32,7 @@ import {
   selectIsLoading,
   selectProfile,
 } from "../session/sessionSlice";
-import { startLogin, startLogout } from "../session/sessionThunks";
+import { startLogout } from "../session/sessionThunks";
 import { selectHasPermission } from "../session/sessionSelectors";
 
 import { ProfileMenu } from "./ProfileMenu";
