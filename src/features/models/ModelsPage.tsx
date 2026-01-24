@@ -19,8 +19,6 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { useAuth } from "../../auth/AuthProvider";
@@ -30,14 +28,11 @@ import {
   searchModels,
   selectModelsError,
   selectModelsItems,
-  selectModelsStatus,
-  type ModelSummary,
 } from "./modelsDataSlice";
 
 import {
   clearSelection,
   resetSearch,
-  selectModel,
   selectModelsDetailsOpen,
   selectModelsFilterText,
   selectModelsSearchJson,
@@ -47,6 +42,7 @@ import {
   setSearchJson,
 } from "./modelsSlice";
 
+import { ModelsDataGrid } from "./ModelsDataGrid";
 import { ModelDetailsPage } from "./ModelDetailsPage";
 
 function safeJsonParse(
@@ -62,10 +58,6 @@ function safeJsonParse(
   }
 }
 
-function getRowId(m: ModelSummary): string {
-  return String(m.fingerprint ?? "");
-}
-
 export function ModelsPage() {
   const { t } = useTranslation(["common", "models"]);
   const dispatch = useAppDispatch();
@@ -78,7 +70,6 @@ export function ModelsPage() {
   const canUpdate = auth.hasPermission("model:update");
 
   const items = useAppSelector(selectModelsItems);
-  const status = useAppSelector(selectModelsStatus);
   const error = useAppSelector(selectModelsError);
 
   const filterText = useAppSelector(selectModelsFilterText);
@@ -86,8 +77,6 @@ export function ModelsPage() {
 
   const selectedFingerprint = useAppSelector(selectModelsSelectedFingerprint);
   const detailsOpen = useAppSelector(selectModelsDetailsOpen);
-
-  const loading = status === "loading";
 
   // derive modelName for the selected fingerprint (required by backend routes)
   const selectedModelName = React.useMemo(() => {
@@ -125,30 +114,6 @@ export function ModelsPage() {
       dispatch(clearSelection());
     }
   }, [dispatch, rows, selectedFingerprint]);
-
-  const columns = React.useMemo<GridColDef<ModelSummary>[]>(
-    () => [
-      {
-        field: "model",
-        headerName: t("models:fields.modelName"),
-        flex: 1,
-        minWidth: 220,
-      },
-      {
-        field: "category",
-        headerName: t("models:fields.category"),
-        flex: 0.6,
-        minWidth: 160,
-      },
-      {
-        field: "fingerprint",
-        headerName: t("models:fields.fingerprint"),
-        flex: 1,
-        minWidth: 280,
-      },
-    ],
-    [],
-  );
 
   const onRefresh = () => {
     if (!canList) return;
@@ -259,34 +224,7 @@ export function ModelsPage() {
       {/* Grid */}
       <Paper sx={{ p: 2 }}>
         <Box sx={{ width: "100%", height: 520, minWidth: 0 }}>
-          <DataGrid
-            rows={rows ?? []}
-            columns={columns}
-            getRowId={getRowId}
-            loading={loading}
-            // DO NOT use DataGrid selection system at all
-            rowSelection={false as any}
-            disableRowSelectionOnClick
-            hideFooterSelectedRowCount
-            onRowClick={(params) => dispatch(selectModel(String(params.id)))}
-            getRowClassName={(params) =>
-              String(params.id) === String(selectedFingerprint ?? "")
-                ? "rtl433dp-row-selected"
-                : ""
-            }
-            sx={{
-              "& .rtl433dp-row-selected": {
-                backgroundColor: "action.selected",
-              },
-              "& .rtl433dp-row-selected:hover": {
-                backgroundColor: "action.selected",
-              },
-            }}
-            initialState={{
-              pagination: { paginationModel: { pageSize: 50, page: 0 } },
-            }}
-            pageSizeOptions={[25, 50, 100]}
-          />
+          <ModelsDataGrid />
         </Box>
       </Paper>
 
