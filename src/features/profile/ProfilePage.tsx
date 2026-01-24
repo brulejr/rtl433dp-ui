@@ -1,6 +1,5 @@
 // src/features/profile/profilePage.tsx
 import {
-  Alert,
   Avatar,
   Box,
   Button,
@@ -12,7 +11,6 @@ import {
   Typography,
 } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
-import LoginIcon from "@mui/icons-material/Login";
 
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
@@ -22,7 +20,7 @@ import {
   selectPermissions,
   selectAccessToken,
 } from "../session/sessionSlice";
-import { startLogin, startLogout } from "../session/sessionThunks";
+import { startLogout } from "../session/sessionThunks";
 
 export function ProfilePage() {
   const { t } = useTranslation(["common", "profile"]);
