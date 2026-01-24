@@ -20,15 +20,10 @@ import {
 
 import MenuIcon from "@mui/icons-material/Menu";
 import SensorsIcon from "@mui/icons-material/Sensors";
-import PersonIcon from "@mui/icons-material/Person";
-import LogoutIcon from "@mui/icons-material/Logout";
-import LoginIcon from "@mui/icons-material/Login";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import HubIcon from "@mui/icons-material/Hub";
 import RecommendIcon from "@mui/icons-material/Recommend";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
-import LightModeIcon from "@mui/icons-material/LightMode";
 
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
@@ -42,8 +37,7 @@ import {
 import { startLogin, startLogout } from "../session/sessionThunks";
 import { selectHasPermission } from "../session/sessionSelectors";
 
-import { LanguageSwitcherMenuItem } from "../../components/LanguageSwitcherMenuItem";
-import { ColorModeContext } from "../../components/ColorModeProvider";
+import { ProfileMenu } from "./ProfileMenu";
 
 const drawerWidthExpanded = 260;
 const drawerWidthCollapsed = 72;
@@ -72,8 +66,6 @@ export function AppLayout() {
   const { t } = useTranslation(["common"]);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-
-  const { mode, toggleColorMode } = React.useContext(ColorModeContext);
 
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const isLoading = useAppSelector(selectIsLoading);
@@ -115,13 +107,6 @@ export function AppLayout() {
   // Avatar menu
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
-
-  const handleLogin = () => {
-    setAnchorEl(null);
-    dispatch(startLogin())
-      .unwrap()
-      .catch((e) => console.error("Login failed:", e));
-  };
 
   const handleLogout = () => {
     setAnchorEl(null);
@@ -267,69 +252,16 @@ export function AppLayout() {
             </span>
           </Tooltip>
 
-          <Menu
+          <ProfileMenu
             anchorEl={anchorEl}
-            open={menuOpen}
+            menuOpen={menuOpen}
             onClose={() => setAnchorEl(null)}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "right" }}
-          >
-            {isAuthenticated ? (
-              <>
-                <MenuItem
-                  onClick={() => {
-                    setAnchorEl(null);
-                    navigate("/profile");
-                  }}
-                >
-                  <ListItemIcon>
-                    <PersonIcon />
-                  </ListItemIcon>
-                  <ListItemText primary={t("common:nav.profile")} />
-                </MenuItem>
-
-                <Divider />
-
-                <LanguageSwitcherMenuItem />
-
-                <MenuItem onClick={toggleColorMode}>
-                  <ListItemIcon sx={{ minWidth: 36 }}>
-                    {mode === "dark" ? (
-                      <LightModeIcon fontSize="small" />
-                    ) : (
-                      <DarkModeIcon fontSize="small" />
-                    )}
-                  </ListItemIcon>
-                  <ListItemText primary={t("common:labels.theme")} />
-
-                  <Typography
-                    variant="body2"
-                    sx={{ color: "text.secondary", mr: 1 }}
-                  >
-                    {t(
-                      mode === "dark"
-                        ? "common:labels.dark"
-                        : "common:labels.light",
-                    )}
-                  </Typography>
-                </MenuItem>
-
-                <MenuItem onClick={handleLogout}>
-                  <ListItemIcon>
-                    <LogoutIcon fontSize="small" />
-                  </ListItemIcon>
-                  {t("common:auth.logout")}
-                </MenuItem>
-              </>
-            ) : (
-              <MenuItem onClick={handleLogin}>
-                <ListItemIcon>
-                  <LoginIcon fontSize="small" />
-                </ListItemIcon>
-                Login
-              </MenuItem>
-            )}
-          </Menu>
+            onProfileNav={() => {
+              setAnchorEl(null);
+              navigate("/profile");
+            }}
+            onLogout={handleLogout}
+          />
         </Toolbar>
       </AppBar>
 
