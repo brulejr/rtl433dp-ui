@@ -12,7 +12,7 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 
 import { useTranslation } from "react-i18next";
 
-import { ColorModeContext } from "./ColorModeProvider";
+import { ColorModeContext } from "../theme/ColorModeProvider";
 
 export function ColorModeMenuItem() {
   const { t } = useTranslation(["common"]);

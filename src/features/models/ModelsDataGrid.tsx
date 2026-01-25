@@ -82,18 +82,15 @@ export function ModelsDataGrid() {
       disableRowSelectionOnClick
       hideFooterSelectedRowCount
       onRowClick={(params) => dispatch(selectModel(String(params.id)))}
-      getRowClassName={(params) =>
-        String(params.id) === String(selectedFingerprint ?? "")
-          ? "rtl433dp-row-selected"
-          : ""
-      }
-      sx={{
-        "& .rtl433dp-row-selected": {
-          backgroundColor: "action.selected",
-        },
-        "& .rtl433dp-row-selected:hover": {
-          backgroundColor: "action.selected",
-        },
+      getRowClassName={(params) => {
+        const isSelected =
+          String(params.id) === String(selectedFingerprint ?? "");
+        const stripe =
+          params.indexRelativeToCurrentPage % 2 === 0
+            ? "rtl433dp-row-even"
+            : "rtl433dp-row-odd";
+
+        return isSelected ? `rtl433dp-row-selected ${stripe}` : stripe;
       }}
       initialState={{
         pagination: { paginationModel: { pageSize: 50, page: 0 } },
