@@ -1,23 +1,16 @@
 // src/features/models/ModelsPage.tsx
 import * as React from "react";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Box,
   Button,
   Drawer,
   Paper,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import SearchIcon from "@mui/icons-material/Search";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
 
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
@@ -43,6 +36,7 @@ import {
 } from "./modelsSlice";
 
 import { DataGridFilter } from "../../components/DataGridFilter";
+import { DataGridSearch } from "../../components/DataGridSearch";
 import { ModelsDataGrid } from "./ModelsDataGrid";
 import { ModelDetailsPage } from "./ModelDetailsPage";
 
@@ -133,11 +127,6 @@ export function ModelsPage() {
     if (canList) dispatch(fetchModels());
   };
 
-  const jsonValidation = React.useMemo(
-    () => safeJsonParse(searchJson),
-    [searchJson],
-  );
-
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -170,54 +159,12 @@ export function ModelsPage() {
         </Stack>
 
         <Box sx={{ mt: 2 }}>
-          <Accordion disabled={!canSearch}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography sx={{ fontWeight: 600 }}>
-                {t("models:search.title")}
-              </Typography>
-            </AccordionSummary>
-
-            <AccordionDetails>
-              <Stack spacing={2}>
-                <TextField
-                  label="JSON body"
-                  value={searchJson}
-                  onChange={(e) => dispatch(setSearchJson(e.target.value))}
-                  multiline
-                  minRows={6}
-                  placeholder='Example: {"model":"Acurite-5n1"}'
-                  error={!jsonValidation.ok}
-                  helperText={
-                    !canSearch
-                      ? "Requires model:search permission."
-                      : !jsonValidation.ok
-                        ? jsonValidation.error
-                        : "Provide JSON body for advanced model search."
-                  }
-                  fullWidth
-                />
-
-                <Stack direction="row" spacing={1} justifyContent="flex-end">
-                  <Button
-                    variant="outlined"
-                    startIcon={<RestartAltIcon />}
-                    onClick={onReset}
-                  >
-                    Reset
-                  </Button>
-
-                  <Button
-                    variant="contained"
-                    startIcon={<SearchIcon />}
-                    onClick={onSearch}
-                    disabled={!canSearch || !jsonValidation.ok}
-                  >
-                    Search
-                  </Button>
-                </Stack>
-              </Stack>
-            </AccordionDetails>
-          </Accordion>
+          <DataGridSearch
+            searchJson={searchJson}
+            onChange={(e) => dispatch(setSearchJson(e.target.value))}
+            onReset={onReset}
+            onSearch={onSearch}
+          />
         </Box>
       </Paper>
 
