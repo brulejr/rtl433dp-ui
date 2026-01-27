@@ -4,14 +4,9 @@ import {
   Alert,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   IconButton,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 
@@ -26,29 +21,12 @@ import {
   selectModelDetails,
   selectModelDetailsError,
   selectModelDetailsStatus,
-  selectUpdateSensorsError,
-  selectUpdateSensorsStatus,
-  updateModelSensors,
   type ModelDetails,
 } from "./modelsDataSlice";
 
-import {
-  selectModelsUpdateSensorsOpen,
-  setUpdateSensorsOpen,
-} from "./modelsSlice";
+import { setUpdateSensorsOpen } from "./modelsSlice";
 
-function safeJsonParse(
-  text: string,
-): { ok: true; value: unknown } | { ok: false; error: string } {
-  const trimmed = (text ?? "").trim();
-  if (!trimmed) return { ok: true, value: {} };
-
-  try {
-    return { ok: true, value: JSON.parse(trimmed) };
-  } catch (e: any) {
-    return { ok: false, error: e?.message ?? "Invalid JSON" };
-  }
-}
+import { SensorUpdateDialog } from "./SensorUpdateDialog";
 
 function pretty(v: unknown): string {
   try {
@@ -113,26 +91,6 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
       }),
     );
   }, [dispatch, fingerprint, modelName, canGet, details]);
-
-  // --- Update sensors dialog state ---
-  const updateSensorsOpen = useAppSelector(selectModelsUpdateSensorsOpen);
-  const updateStatus = useAppSelector(selectUpdateSensorsStatus);
-  const updateError = useAppSelector(selectUpdateSensorsError);
-  const updating = updateStatus === "loading";
-
-  const [updateBodyText, setUpdateBodyText] = React.useState<string>("");
-
-  React.useEffect(() => {
-    if (!updateSensorsOpen) return;
-    // sensors can be an object OR an array (your HAR shows array)
-    const initial = (details as any)?.sensors ?? {};
-    setUpdateBodyText(pretty(initial));
-  }, [updateSensorsOpen, details]);
-
-  const updateJsonValidation = React.useMemo(
-    () => safeJsonParse(updateBodyText),
-    [updateBodyText],
-  );
 
   return (
     <Stack sx={{ p: 2 }} spacing={1}>
@@ -252,102 +210,7 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
           </>
         )}
 
-      {/* Update sensors dialog */}
-      <Dialog
-        open={updateSensorsOpen}
-        onClose={() => dispatch(setUpdateSensorsOpen(false))}
-        fullWidth
-        maxWidth="md"
-      >
-        <DialogTitle sx={{ pr: 6 }}>
-          Update sensors
-          <IconButton
-            onClick={() => dispatch(setUpdateSensorsOpen(false))}
-            sx={{ position: "absolute", right: 8, top: 8 }}
-            aria-label="Close"
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent dividers>
-          {!canUpdate && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              You do not have permission to update sensors. (Requires{" "}
-              <code>model:update</code>)
-            </Alert>
-          )}
-
-          {!!updateError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {updateError}
-            </Alert>
-          )}
-
-          <TextField
-            label="Sensors payload (JSON)"
-            value={updateBodyText}
-            onChange={(e) => setUpdateBodyText(e.target.value)}
-            multiline
-            minRows={10}
-            fullWidth
-            disabled={!canUpdate || updating}
-            error={!updateJsonValidation.ok}
-            helperText={
-              !updateJsonValidation.ok
-                ? updateJsonValidation.error
-                : "Edit the sensors payload. This is sent as JSON to the backend."
-            }
-          />
-        </DialogContent>
-
-        <DialogActions>
-          <Button
-            onClick={() => dispatch(setUpdateSensorsOpen(false))}
-            disabled={updating}
-          >
-            Cancel
-          </Button>
-
-          <Button
-            variant="contained"
-            startIcon={<SystemUpdateAltIcon />}
-            disabled={
-              !canUpdate ||
-              updating ||
-              !fingerprint ||
-              !modelName ||
-              !updateJsonValidation.ok
-            }
-            onClick={async () => {
-              if (!fingerprint || !modelName) return;
-
-              const parsed = safeJsonParse(updateBodyText);
-              if (!parsed.ok) return;
-
-              await dispatch(
-                updateModelSensors({
-                  modelName,
-                  fingerprint,
-                  payload: parsed.value,
-                }),
-              );
-
-              dispatch(setUpdateSensorsOpen(false));
-
-              // refresh details after update
-              dispatch(
-                fetchModelDetails({
-                  modelName,
-                  fingerprint,
-                }),
-              );
-            }}
-          >
-            Update
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <SensorUpdateDialog canUpdate={canUpdate} modelDetails={details} />
     </Stack>
   );
 }

@@ -20,9 +20,19 @@
     "fingerprint": "Fingerprint",
     "sensors": "Sensors"
   },
+  "sensors": {
+    "title": "Update sensors",
+    "fields": {
+      "sensorPayload": {
+        "label": "Sensors payload (JSON)",
+        "helperText": "Edit the sensors payload. This is sent as JSON to the backend."
+      }
+    }
+  },
   "errorcode": {
     "MODL001": "You do not have permission to view Models.",
-    "MODL002": "You do not have permission to view Model Details."
+    "MODL002": "You do not have permission to view Model Details.",
+    "MODL003": "You do not have permission to update Model Sensors."
   },
   "messages": {
     "loadingDetails": "Loading details…",

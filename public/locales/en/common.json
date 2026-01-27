@@ -13,12 +13,14 @@
   },
   "actions": {
     "cancel": "Cancel",
+    "close": "Close",
     "filter": "Filter",
     "promote": "Promote",
     "refresh": "Refresh",
     "reset": "Reset",
     "save": "Save",
-    "search": "Search"
+    "search": "Search",
+    "update": "Update"
   },
   "errors": {
     "generic": "Something went wrong.",
