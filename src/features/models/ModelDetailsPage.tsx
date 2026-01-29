@@ -27,6 +27,7 @@ import {
 import { setUpdateSensorsOpen } from "./modelsSlice";
 
 import { SensorUpdateDialog } from "./SensorUpdateDialog";
+import { JsonStructureTreeView } from "./JsonStructureTreeView";
 
 function pretty(v: unknown): string {
   try {
@@ -76,6 +77,8 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
     const anyDetails: any = rawDetails as any;
     return (anyDetails?.content ?? anyDetails) as ModelDetails;
   }, [rawDetails]);
+
+  const jsonStructure = (details as any)?.jsonStructure;
 
   // Fetch details when fingerprint/modelName become available and we don't already have details.
   React.useEffect(() => {
@@ -153,20 +156,32 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
               <Typography variant="subtitle2" color="text.secondary">
                 {t("models:fields.modelName")}
               </Typography>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+              <Typography variant="body1" sx={{ fontWeight: 300 }}>
                 {details.model}
               </Typography>
 
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                sx={{ mt: 1 }}
-              >
+              <Typography variant="subtitle2" color="text.secondary">
                 {t("models:fields.fingerprint")}
               </Typography>
               <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
                 {details.fingerprint}
               </Typography>
+
+              {!!jsonStructure && (
+                <>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    sx={{ pt: 1 }}
+                  >
+                    {t("models:fields.jsonStructure")}
+                  </Typography>
+                  <JsonStructureTreeView
+                    value={jsonStructure}
+                    maxHeight={500}
+                  />
+                </>
+              )}
             </Stack>
 
             <Divider sx={{ my: 2 }} />

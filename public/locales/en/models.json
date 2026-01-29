@@ -18,6 +18,7 @@
     "modelName": "Model",
     "category": "Category",
     "fingerprint": "Fingerprint",
+    "jsonStructure": "JSON Structure",
     "sensors": "Sensors"
   },
   "sensors": {
