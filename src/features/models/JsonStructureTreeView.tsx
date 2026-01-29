@@ -1,143 +1,151 @@
 // src/features/models/JsonStructureTreeView.tsx
+import * as React from "react";
 import { Box, Stack, Typography } from "@mui/material";
-
 import { SimpleTreeView } from "@mui/x-tree-view/SimpleTreeView";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
 
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+export type JsonTreeNodeId = string;
 
 export type JsonStructureTreeViewProps = {
   value: unknown;
   maxHeight?: number;
+
+  // optional controlled expansion (enables Expand/Collapse all)
+  expandedItems?: JsonTreeNodeId[];
+  onExpandedItemsChange?: (
+    event: React.SyntheticEvent,
+    itemIds: string[],
+  ) => void;
+
+  // emits list of node ids in this tree (used by parent for Expand all)
+  onNodeIdsComputed?: (ids: JsonTreeNodeId[]) => void;
 };
 
-function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
-function labelForPrimitive(v: unknown): string {
+function nodeType(v: unknown): string {
+  if (Array.isArray(v)) return "Array";
+  if (isPlainObject(v)) return "Object";
   if (v === null) return "null";
-  if (v === undefined) return "undefined";
-  if (typeof v === "string") return v;
-  if (typeof v === "number" || typeof v === "boolean" || typeof v === "bigint")
-    return String(v);
-  return Object.prototype.toString.call(v);
+  return typeof v;
 }
 
-function nodeSummary(v: unknown): string {
-  if (Array.isArray(v)) return `Array(${v.length})`;
-  if (isObject(v)) return "Object";
-  return labelForPrimitive(v);
+function childId(parent: string, key: string | number) {
+  // stable readable ids: root.foo, root.arr[0]
+  if (typeof key === "number") return `${parent}[${key}]`;
+  // replace dots just in case, to avoid collision with our delimiter
+  const safe = key.replaceAll(".", "·");
+  return `${parent}.${safe}`;
 }
 
-function JsonNode({
-  name,
-  value,
-  path,
-}: {
-  name: string;
-  value: unknown;
-  path: string;
-}) {
-  const itemId = path || "root";
+function collectNodeIds(value: unknown, id: string): JsonTreeNodeId[] {
+  const ids: JsonTreeNodeId[] = [id];
 
-  const isArr = Array.isArray(value);
-  const isObj = isObject(value);
-
-  const hasChildren =
-    (isArr && value.length > 0) || (isObj && Object.keys(value).length > 0);
-
-  const label = (
-    <Stack direction="row" spacing={1} alignItems="baseline" sx={{ py: 0.25 }}>
-      <Typography
-        variant="body2"
-        sx={{ fontFamily: "monospace", fontWeight: 600 }}
-      >
-        {name}
-      </Typography>
-
-      <Typography variant="caption" color="text.secondary">
-        {hasChildren ? nodeSummary(value) : String(nodeSummary(value))}
-      </Typography>
-
-      {!hasChildren && (
-        <Typography
-          variant="caption"
-          sx={{ fontFamily: "monospace" }}
-          color="text.secondary"
-        >
-          {/* If jsonStructure is the usual { field: "number" } shape, show the type nicely */}
-          {typeof value === "string"
-            ? `: ${value}`
-            : `: ${labelForPrimitive(value)}`}
-        </Typography>
-      )}
-    </Stack>
-  );
-
-  if (!hasChildren) {
-    return <TreeItem itemId={itemId} label={label} />;
+  if (Array.isArray(value)) {
+    value.forEach((v, idx) => {
+      ids.push(...collectNodeIds(v, childId(id, idx)));
+    });
+    return ids;
   }
 
-  if (isArr) {
+  if (isPlainObject(value)) {
+    Object.entries(value).forEach(([k, v]) => {
+      ids.push(...collectNodeIds(v, childId(id, k)));
+    });
+    return ids;
+  }
+
+  return ids;
+}
+
+function renderLabel(label: string, value: unknown) {
+  const t = nodeType(value);
+
+  return (
+    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+      <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+        {label}
+      </Typography>
+      <Typography variant="caption" color="text.secondary" noWrap>
+        {t}
+      </Typography>
+    </Stack>
+  );
+}
+
+function buildTree(value: unknown, id: string, label: string): React.ReactNode {
+  if (Array.isArray(value)) {
     return (
-      <TreeItem itemId={itemId} label={label}>
-        {value.map((child, idx) => (
-          <JsonNode
-            key={`${itemId}.${idx}`}
-            name={`[${idx}]`}
-            value={child}
-            path={`${itemId}.${idx}`}
-          />
-        ))}
+      <TreeItem key={id} itemId={id} label={renderLabel(label, value)}>
+        {value.map((v, idx) => buildTree(v, childId(id, idx), String(idx)))}
       </TreeItem>
     );
   }
 
-  // object
-  const entries = Object.entries(value).sort(([a], [b]) => a.localeCompare(b));
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value);
+    return (
+      <TreeItem key={id} itemId={id} label={renderLabel(label, value)}>
+        {entries.map(([k, v]) => buildTree(v, childId(id, k), k))}
+      </TreeItem>
+    );
+  }
+
+  // leaf
   return (
-    <TreeItem itemId={itemId} label={label}>
-      {entries.map(([k, v]) => (
-        <JsonNode
-          key={`${itemId}.${k}`}
-          name={k}
-          value={v}
-          path={`${itemId}.${k}`}
-        />
-      ))}
-    </TreeItem>
+    <TreeItem
+      key={id}
+      itemId={id}
+      label={
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{ minWidth: 0 }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+            {label}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {String(value)}
+          </Typography>
+        </Stack>
+      }
+    />
   );
 }
 
 export function JsonStructureTreeView(props: JsonStructureTreeViewProps) {
-  const { value, maxHeight = 260 } = props;
+  const {
+    value,
+    maxHeight = 420,
+    expandedItems,
+    onExpandedItemsChange,
+    onNodeIdsComputed,
+  } = props;
+
+  React.useEffect(() => {
+    if (!onNodeIdsComputed) return;
+    onNodeIdsComputed(collectNodeIds(value, "root"));
+  }, [value, onNodeIdsComputed]);
 
   return (
     <Box
       sx={{
-        mt: 1,
-        p: 1,
-        borderRadius: 1,
-        bgcolor: "action.hover",
-        overflow: "auto",
         maxHeight,
+        overflow: "auto",
+        borderRadius: 1.5,
+        bgcolor: "action.hover",
+        p: 1,
       }}
     >
       <SimpleTreeView
-        aria-label="JSON structure"
-        slots={{
-          expandIcon: ChevronRightIcon,
-          collapseIcon: ExpandMoreIcon,
-        }}
-        sx={{
-          "& .MuiTreeItem-label": {
-            width: "100%",
-          },
-        }}
+        expandedItems={expandedItems}
+        onExpandedItemsChange={onExpandedItemsChange}
       >
-        <JsonNode name="root" value={value} path="root" />
+        {buildTree(value, "root", "root")}
       </SimpleTreeView>
     </Box>
   );

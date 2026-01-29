@@ -180,7 +180,25 @@ export function ModelsPage() {
         anchor="right"
         open={detailsOpen}
         onClose={() => dispatch(setDetailsOpen(false))}
-        PaperProps={{ sx: { width: { xs: "100%", sm: 520 } } }}
+        PaperProps={{
+          sx: (theme) => ({
+            width: { xs: "100%", sm: 520 },
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            borderLeft: 1,
+            borderColor: "divider",
+            borderRadius: 0,
+
+            // ✅ Offset drawer below your top AppBar (56px mobile, 64px desktop)
+            top: { xs: 56, sm: 64 },
+            height: { xs: "calc(100% - 56px)", sm: "calc(100% - 64px)" },
+
+            // optional: if you have a different toolbar height, use theme:
+            // top: { xs: theme.spacing(7), sm: theme.spacing(8) },
+            // height: { xs: `calc(100% - ${theme.spacing(7)})`, sm: `calc(100% - ${theme.spacing(8)})` },
+          }),
+        }}
       >
         <ModelDetailsPage
           fingerprint={selectedFingerprint}
