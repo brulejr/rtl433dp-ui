@@ -4,20 +4,14 @@ import {
   Box,
   Button,
   Chip,
-  Divider,
-  IconButton,
-  InputAdornment,
   Paper,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 
-import ClearIcon from "@mui/icons-material/Clear";
-import SearchIcon from "@mui/icons-material/Search";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 
 import DoorFrontIcon from "@mui/icons-material/DoorFront";
@@ -31,19 +25,11 @@ import NetworkCheckIcon from "@mui/icons-material/NetworkCheck";
 import BugReportIcon from "@mui/icons-material/BugReport";
 
 import { useTranslation } from "react-i18next";
-import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { useAppDispatch } from "../../app/hooks";
 
 import { type ModelDetails } from "./modelsDataSlice";
 
 import { setUpdateSensorsOpen } from "./modelsSlice";
-
-function matchesQuickFilter(row: SensorRow, q: string): boolean {
-  if (!q) return true;
-  const hay = [row.name, row.type, row.classname, row.friendlyName ?? ""]
-    .map(normalize)
-    .join(" ");
-  return hay.includes(q);
-}
 
 function normalize(v: unknown): string {
   return String(v ?? "")
@@ -113,8 +99,6 @@ type Props = {
 export function SensorsCard({ canUpdate, modelDetails }: Props) {
   const { t } = useTranslation(["common"]);
   const dispatch = useAppDispatch();
-
-  const [sensorFilter, setSensorFilter] = React.useState("");
 
   const cardSx = React.useMemo(
     () => ({
@@ -229,19 +213,6 @@ export function SensorsCard({ canUpdate, modelDetails }: Props) {
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
               {t("models:fields.sensors")}
             </Typography>
-
-            {(() => {
-              const all = ((modelDetails as any).sensors ?? []) as any[];
-              return (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ whiteSpace: "nowrap" }}
-                >
-                  · {all.length}
-                </Typography>
-              );
-            })()}
           </Stack>
 
           {canUpdate && (
@@ -256,38 +227,8 @@ export function SensorsCard({ canUpdate, modelDetails }: Props) {
           )}
         </Stack>
 
-        <TextField
-          size="small"
-          value={sensorFilter}
-          onChange={(e) => setSensorFilter(e.target.value)}
-          placeholder="Filter sensors…"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
-              </InputAdornment>
-            ),
-            endAdornment: sensorFilter ? (
-              <InputAdornment position="end">
-                <Tooltip title="Clear" placement="top">
-                  <IconButton
-                    size="small"
-                    onClick={() => setSensorFilter("")}
-                    aria-label="Clear filter"
-                    edge="end"
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </InputAdornment>
-            ) : undefined,
-          }}
-        />
-
-        <Divider />
-
         {(() => {
-          const all = (((modelDetails as any).sensors ?? []) as SensorRow[])
+          const sensors = (((modelDetails as any).sensors ?? []) as SensorRow[])
             .map((s) => ({
               name: s?.name ?? "",
               type: s?.type ?? "",
@@ -296,90 +237,73 @@ export function SensorsCard({ canUpdate, modelDetails }: Props) {
             }))
             .filter((s) => s.name.length > 0);
 
-          all.sort((a, b) => a.name.localeCompare(b.name));
+          sensors.sort((a, b) => a.name.localeCompare(b.name));
 
-          const q = normalize(sensorFilter);
-          const sensors = q ? all.filter((r) => matchesQuickFilter(r, q)) : all;
-
-          if (all.length === 0) {
+          if (sensors.length === 0) {
             return (
               <Typography variant="body2" color="text.secondary">
-                No sensors defined for this model.
+                {t("models:messages.noSensorsDefined")}
               </Typography>
             );
           }
 
           return (
             <Stack spacing={1}>
-              {q && (
-                <Typography variant="caption" color="text.secondary">
-                  Showing {sensors.length} of {all.length}
-                </Typography>
-              )}
-
-              {sensors.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No sensors match “{sensorFilter}”.
-                </Typography>
-              ) : (
-                <Box
+              <Box
+                sx={{
+                  height: 340,
+                  maxHeight: "min(340px, calc(100vh - 520px))",
+                }}
+              >
+                <DataGrid
+                  rows={sensors}
+                  columns={columns}
+                  getRowId={(row) => row.name}
+                  getRowClassName={(params) =>
+                    params.indexRelativeToCurrentPage % 2 === 0 ? "even" : "odd"
+                  }
+                  density="compact"
+                  getRowHeight={() => 52}
+                  headerHeight={40}
+                  disableRowSelectionOnClick
+                  hideFooter
+                  disableColumnMenu
+                  disableColumnFilter
+                  disableColumnSelector
+                  disableDensitySelector
                   sx={{
-                    height: 340,
-                    maxHeight: "min(340px, calc(100vh - 520px))",
+                    border: 0,
+                    "& .MuiDataGrid-columnHeaders": {
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 10,
+                      bgcolor: "background.paper",
+                      borderBottom: 1,
+                      borderColor: "divider",
+                    },
+                    "& .MuiDataGrid-columnHeaderTitle": {
+                      fontWeight: 700,
+                    },
+                    "& .MuiDataGrid-columnSeparator": {
+                      display: "none",
+                    },
+                    "& .MuiDataGrid-virtualScroller": {
+                      zIndex: 0,
+                      overflowX: "hidden",
+                    },
+                    "& .MuiDataGrid-cell": {
+                      py: 0.5,
+                      alignItems: "flex-start !important",
+                    },
+                    "& .MuiDataGrid-row.odd": {
+                      bgcolor: "action.hover",
+                    },
+                    "& .MuiDataGrid-row.odd:hover": {
+                      bgcolor: "action.selected",
+                    },
                   }}
-                >
-                  <DataGrid
-                    rows={sensors}
-                    columns={columns}
-                    getRowId={(row) => row.name}
-                    getRowClassName={(params) =>
-                      params.indexRelativeToCurrentPage % 2 === 0
-                        ? "even"
-                        : "odd"
-                    }
-                    density="compact"
-                    getRowHeight={() => 52}
-                    headerHeight={40}
-                    disableRowSelectionOnClick
-                    hideFooter
-                    disableColumnMenu
-                    disableColumnFilter
-                    disableColumnSelector
-                    disableDensitySelector
-                    sx={{
-                      border: 0,
-                      "& .MuiDataGrid-columnHeaders": {
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 10,
-                        bgcolor: "background.paper",
-                        borderBottom: 1,
-                        borderColor: "divider",
-                      },
-                      "& .MuiDataGrid-columnHeaderTitle": {
-                        fontWeight: 700,
-                      },
-                      "& .MuiDataGrid-columnSeparator": {
-                        display: "none",
-                      },
-                      "& .MuiDataGrid-virtualScroller": {
-                        zIndex: 0,
-                        overflowX: "hidden",
-                      },
-                      "& .MuiDataGrid-cell": {
-                        py: 0.5,
-                        alignItems: "flex-start !important",
-                      },
-                      "& .MuiDataGrid-row.odd": {
-                        bgcolor: "action.hover",
-                      },
-                      "& .MuiDataGrid-row.odd:hover": {
-                        bgcolor: "action.selected",
-                      },
-                    }}
-                  />
-                </Box>
-              )}
+                />
+              </Box>
             </Stack>
           );
         })()}

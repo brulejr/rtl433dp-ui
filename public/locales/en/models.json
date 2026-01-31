@@ -38,6 +38,7 @@
   "messages": {
     "loadingDetails": "Loading details…",
     "noDetailsLoadedYet": "No details loaded yet.",
+    "noSensorsDefined": "No sensors defined for this model.",
     "selectModelForDetails": "Select a model to see details."
   }
 }
