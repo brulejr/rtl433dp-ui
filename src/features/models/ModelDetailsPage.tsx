@@ -16,8 +16,6 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
-import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
 
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
@@ -33,10 +31,7 @@ import {
 import { SensorsCard } from "./SensorsCard";
 import { SensorUpdateDialog } from "./SensorUpdateDialog";
 
-import {
-  JsonStructureTreeView,
-  type JsonTreeNodeId,
-} from "./JsonStructureTreeView";
+import { JsonStructureCard } from "./JsonStructureCard";
 
 function truncateMiddle(value: string, head = 10, tail = 10) {
   if (value.length <= head + tail + 3) return value;
@@ -94,14 +89,6 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
   const dispatch = useAppDispatch();
 
   const [copiedFp, setCopiedFp] = React.useState(false);
-  const [copiedJson, setCopiedJson] = React.useState(false);
-
-  const [jsonExpanded, setJsonExpanded] = React.useState<JsonTreeNodeId[]>([
-    "root",
-  ]);
-  const [allJsonNodeIds, setAllJsonNodeIds] = React.useState<JsonTreeNodeId[]>(
-    [],
-  );
 
   const rawDetails: unknown | undefined = useAppSelector(
     fingerprint ? selectModelDetails(fingerprint) : () => undefined,
@@ -132,10 +119,6 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
     dispatch(fetchModelDetails({ modelName, fingerprint }));
   }, [dispatch, fingerprint, modelName, canGet, details]);
 
-  React.useEffect(() => {
-    setJsonExpanded(["root"]);
-  }, [fingerprint]);
-
   const handleCopyFingerprint = React.useCallback(async () => {
     const fp = (details as any)?.fingerprint ?? fingerprint;
     if (!fp) return;
@@ -144,14 +127,6 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
     setCopiedFp(ok);
     window.setTimeout(() => setCopiedFp(false), 1200);
   }, [details, fingerprint]);
-
-  const handleCopyJsonStructure = React.useCallback(async () => {
-    if (!jsonStructure) return;
-    const text = JSON.stringify(jsonStructure, null, 2);
-    const ok = await copyToClipboard(text);
-    setCopiedJson(ok);
-    window.setTimeout(() => setCopiedJson(false), 1200);
-  }, [jsonStructure]);
 
   const showContent =
     !!fingerprint &&
@@ -424,68 +399,7 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
 
               {/* JSON Structure card */}
               {!!jsonStructure && (
-                <Paper variant="outlined" sx={cardSx}>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    spacing={1}
-                  >
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                      {t("models:fields.jsonStructure")}
-                    </Typography>
-
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Tooltip title="Expand all" placement="top">
-                        <span>
-                          <IconButton
-                            size="small"
-                            onClick={() => setJsonExpanded(allJsonNodeIds)}
-                            disabled={allJsonNodeIds.length === 0}
-                            aria-label="Expand all"
-                          >
-                            <UnfoldMoreIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-
-                      <Tooltip title="Collapse all" placement="top">
-                        <IconButton
-                          size="small"
-                          onClick={() => setJsonExpanded(["root"])}
-                          aria-label="Collapse all"
-                        >
-                          <UnfoldLessIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-
-                      <Tooltip
-                        title={copiedJson ? "Copied!" : "Copy JSON"}
-                        placement="top"
-                      >
-                        <IconButton
-                          size="small"
-                          onClick={handleCopyJsonStructure}
-                          aria-label="Copy JSON"
-                        >
-                          <ContentCopyIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </Stack>
-
-                  <Divider sx={{ my: 1.5 }} />
-
-                  <JsonStructureTreeView
-                    value={jsonStructure}
-                    maxHeight={420}
-                    expandedItems={jsonExpanded}
-                    onExpandedItemsChange={(_event, ids) =>
-                      setJsonExpanded(ids as JsonTreeNodeId[])
-                    }
-                    onNodeIdsComputed={(ids) => setAllJsonNodeIds(ids)}
-                  />
-                </Paper>
+                <JsonStructureCard jsonStructure={jsonStructure} />
               )}
 
               <SensorsCard canUpdate={canUpdate} modelDetails={details} />
