@@ -28,6 +28,8 @@ import {
   type ModelDetails,
 } from "./modelsDataSlice";
 
+import { ModelOverviewCard } from "./ModelOverviewCard";
+
 import { SensorsCard } from "./SensorsCard";
 import { SensorUpdateDialog } from "./SensorUpdateDialog";
 
@@ -347,57 +349,8 @@ export function ModelDetailsPage(props: ModelDetailsPageProps) {
 
           {showContent && (
             <>
-              {/* Overview card */}
-              <Paper variant="outlined" sx={cardSx}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                  {t("models:details.overview", { defaultValue: "Overview" })}
-                </Typography>
+              <ModelOverviewCard details={details} fingerprint={fingerprint} />
 
-                <Divider sx={{ my: 1.5 }} />
-
-                <Stack spacing={1}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      {t("models:fields.modelName")}
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {details.model}
-                    </Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      {t("models:fields.fingerprint")}
-                    </Typography>
-
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Tooltip title={details.fingerprint} placement="bottom">
-                        <Typography
-                          variant="body2"
-                          sx={{ fontFamily: "monospace" }}
-                        >
-                          {truncateMiddle(details.fingerprint, 14, 14)}
-                        </Typography>
-                      </Tooltip>
-
-                      <Tooltip
-                        title={copiedFp ? "Copied!" : "Copy"}
-                        placement="top"
-                      >
-                        <IconButton
-                          size="small"
-                          onClick={handleCopyFingerprint}
-                          aria-label="Copy fingerprint"
-                        >
-                          <ContentCopyIcon fontSize="inherit" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </Box>
-                </Stack>
-              </Paper>
-
-              {/* JSON Structure card */}
               {!!jsonStructure && (
                 <JsonStructureCard jsonStructure={jsonStructure} />
               )}
