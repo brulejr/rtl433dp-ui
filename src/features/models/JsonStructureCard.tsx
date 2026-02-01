@@ -10,13 +10,8 @@ import {
 } from "@mui/material";
 
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
-import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
 
-import {
-  JsonStructureTreeView,
-  type JsonTreeNodeId,
-} from "./JsonStructureTreeView";
+import { JsonStructureTreeView } from "./JsonStructureTreeView";
 
 import { useTranslation } from "react-i18next";
 
@@ -51,13 +46,6 @@ export function JsonStructureCard({ jsonStructure }: Props) {
 
   const [copiedJson, setCopiedJson] = React.useState(false);
 
-  const [jsonExpanded, setJsonExpanded] = React.useState<JsonTreeNodeId[]>([
-    "root",
-  ]);
-  const [allJsonNodeIds, setAllJsonNodeIds] = React.useState<JsonTreeNodeId[]>(
-    [],
-  );
-
   const handleCopyJsonStructure = React.useCallback(async () => {
     if (!jsonStructure) return;
     const text = JSON.stringify(jsonStructure, null, 2);
@@ -89,29 +77,6 @@ export function JsonStructureCard({ jsonStructure }: Props) {
         </Typography>
 
         <Stack direction="row" spacing={0.5} alignItems="center">
-          <Tooltip title="Expand all" placement="top">
-            <span>
-              <IconButton
-                size="small"
-                onClick={() => setJsonExpanded(allJsonNodeIds)}
-                disabled={allJsonNodeIds.length === 0}
-                aria-label="Expand all"
-              >
-                <UnfoldMoreIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          <Tooltip title="Collapse all" placement="top">
-            <IconButton
-              size="small"
-              onClick={() => setJsonExpanded(["root"])}
-              aria-label="Collapse all"
-            >
-              <UnfoldLessIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
           <Tooltip title={copiedJson ? "Copied!" : "Copy JSON"} placement="top">
             <IconButton
               size="small"
@@ -126,15 +91,7 @@ export function JsonStructureCard({ jsonStructure }: Props) {
 
       <Divider sx={{ my: 1.5 }} />
 
-      <JsonStructureTreeView
-        value={jsonStructure}
-        maxHeight={420}
-        expandedItems={jsonExpanded}
-        onExpandedItemsChange={(_event, ids) =>
-          setJsonExpanded(ids as JsonTreeNodeId[])
-        }
-        onNodeIdsComputed={(ids) => setAllJsonNodeIds(ids)}
-      />
+      <JsonStructureTreeView value={jsonStructure} maxHeight={420} />
     </Paper>
   );
 }

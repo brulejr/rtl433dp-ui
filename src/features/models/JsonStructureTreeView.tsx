@@ -6,21 +6,6 @@ import { TreeItem } from "@mui/x-tree-view/TreeItem";
 
 export type JsonTreeNodeId = string;
 
-export type JsonStructureTreeViewProps = {
-  value: unknown;
-  maxHeight?: number;
-
-  // optional controlled expansion (enables Expand/Collapse all)
-  expandedItems?: JsonTreeNodeId[];
-  onExpandedItemsChange?: (
-    event: React.SyntheticEvent,
-    itemIds: string[],
-  ) => void;
-
-  // emits list of node ids in this tree (used by parent for Expand all)
-  onNodeIdsComputed?: (ids: JsonTreeNodeId[]) => void;
-};
-
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
@@ -38,26 +23,6 @@ function childId(parent: string, key: string | number) {
   // replace dots just in case, to avoid collision with our delimiter
   const safe = key.replaceAll(".", "·");
   return `${parent}.${safe}`;
-}
-
-function collectNodeIds(value: unknown, id: string): JsonTreeNodeId[] {
-  const ids: JsonTreeNodeId[] = [id];
-
-  if (Array.isArray(value)) {
-    value.forEach((v, idx) => {
-      ids.push(...collectNodeIds(v, childId(id, idx)));
-    });
-    return ids;
-  }
-
-  if (isPlainObject(value)) {
-    Object.entries(value).forEach(([k, v]) => {
-      ids.push(...collectNodeIds(v, childId(id, k)));
-    });
-    return ids;
-  }
-
-  return ids;
 }
 
 function renderLabel(label: string, value: unknown) {
@@ -117,20 +82,12 @@ function buildTree(value: unknown, id: string, label: string): React.ReactNode {
   );
 }
 
-export function JsonStructureTreeView(props: JsonStructureTreeViewProps) {
-  const {
-    value,
-    maxHeight = 420,
-    expandedItems,
-    onExpandedItemsChange,
-    onNodeIdsComputed,
-  } = props;
+export type Props = {
+  value: unknown;
+  maxHeight?: number;
+};
 
-  React.useEffect(() => {
-    if (!onNodeIdsComputed) return;
-    onNodeIdsComputed(collectNodeIds(value, "root"));
-  }, [value, onNodeIdsComputed]);
-
+export function JsonStructureTreeView({ value, maxHeight = 420 }: Props) {
   return (
     <Box
       sx={{
@@ -141,12 +98,7 @@ export function JsonStructureTreeView(props: JsonStructureTreeViewProps) {
         p: 1,
       }}
     >
-      <SimpleTreeView
-        expandedItems={expandedItems}
-        onExpandedItemsChange={onExpandedItemsChange}
-      >
-        {buildTree(value, "root", "root")}
-      </SimpleTreeView>
+      <SimpleTreeView>{buildTree(value, "root", "root")}</SimpleTreeView>
     </Box>
   );
 }
