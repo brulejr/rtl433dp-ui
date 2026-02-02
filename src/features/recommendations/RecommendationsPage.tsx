@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Container,
   Dialog,
   DialogActions,
   DialogContent,
@@ -41,6 +42,8 @@ import {
   selectRecommendationsPromoteStatus,
   selectRecommendationsStatus,
 } from "./recommendationsDataSlice";
+
+import { DataGridFilter } from "../../components/DataGridFilter";
 
 function safeString(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -164,7 +167,6 @@ export function RecommendationsPage() {
       { field: "model", headerName: "Model", flex: 1, minWidth: 160 },
       { field: "id", headerName: "ID", flex: 0.7, minWidth: 130 },
 
-      // ✅ FIX: MUI DataGrid valueGetter signature is (value, row, column, apiRef)
       {
         field: "weight",
         headerName: "Weight",
@@ -229,152 +231,167 @@ export function RecommendationsPage() {
   );
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="h4">{t("recommendations:title")}</Typography>
-
-        <Button
-          variant="contained"
-          startIcon={<RefreshIcon />}
-          onClick={onRefresh}
-          disabled={!canList || loading}
+    <Container maxWidth="lg" sx={{ py: 2 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ xs: "stretch", sm: "center" }}
+          justifyContent="space-between"
         >
-          Refresh
-        </Button>
-      </Stack>
+          <Typography variant="h4">{t("recommendations:title")}</Typography>
 
-      {!canList && (
-        <Alert severity="warning">
-          You do not have permission to view Recommendations. (Requires{" "}
-          <code>recommendation:list</code>)
-        </Alert>
-      )}
+          <Button
+            variant="contained"
+            startIcon={<RefreshIcon />}
+            onClick={onRefresh}
+            disabled={!canList || loading}
+            sx={{ alignSelf: { xs: "flex-start", sm: "auto" } }}
+          >
+            Refresh
+          </Button>
+        </Stack>
 
-      {!!error && <Alert severity="error">{error}</Alert>}
+        {!canList && (
+          <Alert severity="warning">
+            You do not have permission to view Recommendations. (Requires{" "}
+            <code>recommendation:list</code>)
+          </Alert>
+        )}
 
-      <Stack direction="row" spacing={2} alignItems="center">
-        <TextField
-          label={t("common:actions.filter")}
-          value={filterText}
-          onChange={(e) => setFilterTextLocal(e.target.value)}
-          fullWidth
-          disabled={!canList}
-        />
-      </Stack>
+        {!!error && <Alert severity="error">{error}</Alert>}
 
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ width: "100%", height: 420, minWidth: 0 }}>
-          <DataGrid
-            rows={canList ? rows : []}
-            columns={columns}
-            getRowId={getRowKey}
-            loading={canList && loading}
-            rowSelection={false}
-            disableRowSelectionOnClick
-            hideFooterSelectedRowCount
-            onRowClick={(params) => setSelectedKey(String(params.id))}
-            onRowDoubleClick={(params) => onOpenPromote(params.row)}
-            getRowClassName={(params) =>
-              String(params.id) === String(selectedKey ?? "")
-                ? "rtl433dp-row-selected"
-                : ""
-            }
-            sx={{
-              "& .rtl433dp-row-selected": {
-                backgroundColor: "action.selected",
-              },
-              "& .rtl433dp-row-selected:hover": {
-                backgroundColor: "action.selected",
-              },
-            }}
-            initialState={{
-              pagination: { paginationModel: { pageSize: 100, page: 0 } },
-              sorting: { sortModel: [{ field: "weight", sort: "desc" }] },
-            }}
-            pageSizeOptions={[25, 50, 100]}
-          />
-        </Box>
-      </Paper>
+        <Paper sx={{ p: 2, width: "100%", overflowX: "auto" }}>
+          <Stack direction="column" spacing={2} alignItems="stretch">
+            <DataGridFilter
+              canFilter={canList}
+              filterText={filterText}
+              onChange={(e) => setFilterTextLocal(e.target.value)}
+            />
 
-      {/* Promote dialog */}
-      {canPromote && promoteOpen && selected && (
-        <Dialog
-          open={promoteOpen}
-          onClose={onClosePromote}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>{t("recommendations:promote.title")}</DialogTitle>
+            <DataGrid
+              rows={canList ? rows : []}
+              columns={columns}
+              getRowId={getRowKey}
+              loading={canList && loading}
+              rowSelection={false}
+              disableRowSelectionOnClick
+              hideFooterSelectedRowCount
+              onRowClick={(params) => setSelectedKey(String(params.id))}
+              onRowDoubleClick={(params) => onOpenPromote(params.row)}
+              getRowClassName={(params) =>
+                String(params.id) === String(selectedKey ?? "")
+                  ? "rtl433dp-row-selected"
+                  : ""
+              }
+              sx={{
+                minWidth: 900,
+                "& .rtl433dp-row-selected": {
+                  backgroundColor: "action.selected",
+                },
+                "& .rtl433dp-row-selected:hover": {
+                  backgroundColor: "action.selected",
+                },
+              }}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 100, page: 0 } },
+                sorting: { sortModel: [{ field: "weight", sort: "desc" }] },
+              }}
+              pageSizeOptions={[25, 50, 100]}
+            />
+          </Stack>
+        </Paper>
 
-          <DialogContent>
-            <Box sx={{ mt: 1, mb: 2, opacity: 0.85 }}>
-              <div>
-                <strong>Model:</strong> {safeString(selected.model)}
-              </div>
-              <div>
-                <strong>ID:</strong> {safeString(selected.id)}
-              </div>
-            </Box>
+        {/* Promote dialog */}
+        {canPromote && promoteOpen && selected && (
+          <Dialog
+            open={promoteOpen}
+            onClose={onClosePromote}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle>{t("recommendations:promote.title")}</DialogTitle>
 
-            <Box component="form" onSubmit={onSubmitPromote}>
-              <Stack spacing={2}>
-                <TextField
-                  label={t("recommendations:promote.name")}
-                  value={promoteForm.name}
-                  onChange={(e) =>
-                    dispatch(
-                      setPromoteField({ field: "name", value: e.target.value }),
-                    )
-                  }
-                  required
-                  fullWidth
-                  autoFocus
-                />
+            <DialogContent>
+              <Box sx={{ mt: 1, mb: 2, opacity: 0.85 }}>
+                <div>
+                  <strong>Model:</strong> {safeString(selected.model)}
+                </div>
+                <div>
+                  <strong>ID:</strong> {safeString(selected.id)}
+                </div>
+              </Box>
 
-                <TextField
-                  label={t("recommendations:promote.area")}
-                  value={promoteForm.area}
-                  onChange={(e) =>
-                    dispatch(
-                      setPromoteField({ field: "area", value: e.target.value }),
-                    )
-                  }
-                  required
-                  fullWidth
-                />
+              <Box component="form" onSubmit={onSubmitPromote}>
+                <Stack spacing={2}>
+                  <TextField
+                    label={t("recommendations:promote.name")}
+                    value={promoteForm.name}
+                    onChange={(e) =>
+                      dispatch(
+                        setPromoteField({
+                          field: "name",
+                          value: e.target.value,
+                        }),
+                      )
+                    }
+                    required
+                    fullWidth
+                    autoFocus
+                  />
 
-                <TextField
-                  label={t("recommendations:promote.deviceType")}
-                  value={promoteForm.deviceType}
-                  onChange={(e) =>
-                    dispatch(
-                      setPromoteField({
-                        field: "deviceType",
-                        value: e.target.value,
-                      }),
-                    )
-                  }
-                  required
-                  fullWidth
-                />
+                  <TextField
+                    label={t("recommendations:promote.area")}
+                    value={promoteForm.area}
+                    onChange={(e) =>
+                      dispatch(
+                        setPromoteField({
+                          field: "area",
+                          value: e.target.value,
+                        }),
+                      )
+                    }
+                    required
+                    fullWidth
+                  />
 
-                {!!promoteError && (
-                  <Alert severity="error">{promoteError}</Alert>
-                )}
-              </Stack>
+                  <TextField
+                    label={t("recommendations:promote.deviceType")}
+                    value={promoteForm.deviceType}
+                    onChange={(e) =>
+                      dispatch(
+                        setPromoteField({
+                          field: "deviceType",
+                          value: e.target.value,
+                        }),
+                      )
+                    }
+                    required
+                    fullWidth
+                  />
 
-              <DialogActions sx={{ px: 0, mt: 2 }}>
-                <Button onClick={onClosePromote} disabled={promoting}>
-                  {t("common:actions.cancel")}
-                </Button>
-                <Button type="submit" variant="contained" disabled={promoting}>
-                  {t("recommendations:promote.submit")}
-                </Button>
-              </DialogActions>
-            </Box>
-          </DialogContent>
-        </Dialog>
-      )}
-    </Box>
+                  {!!promoteError && (
+                    <Alert severity="error">{promoteError}</Alert>
+                  )}
+                </Stack>
+
+                <DialogActions sx={{ px: 0, mt: 2 }}>
+                  <Button onClick={onClosePromote} disabled={promoting}>
+                    {t("common:actions.cancel")}
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={promoting}
+                  >
+                    {t("recommendations:promote.submit")}
+                  </Button>
+                </DialogActions>
+              </Box>
+            </DialogContent>
+          </Dialog>
+        )}
+      </Box>
+    </Container>
   );
 }

@@ -3,9 +3,9 @@ import * as React from "react";
 import {
   Box,
   Button,
+  Container,
   Paper,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -27,6 +27,8 @@ import {
   selectKnownDevicesSelectedKey,
   setFilterText,
 } from "./knownDevicesSlice";
+
+import { DataGridFilter } from "../../components/DataGridFilter";
 
 function getRowKey(d: KnownDevice): string {
   if (d.key) return d.key;
@@ -124,66 +126,73 @@ export function KnownDevicesPage() {
         minWidth: 160,
       },
     ],
-    [],
+    [t],
   );
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="h4">Known Devices</Typography>
-
-        <Button
-          variant="contained"
-          startIcon={<RefreshIcon />}
-          onClick={() => dispatch(fetchKnownDevices())}
+    <Container maxWidth="lg" sx={{ py: 2 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ xs: "stretch", sm: "center" }}
+          justifyContent="space-between"
         >
-          {t("common:actions.refresh")}
-        </Button>
-      </Stack>
+          <Typography variant="h4">Known Devices</Typography>
 
-      <Stack direction="row" spacing={2} alignItems="center">
-        <TextField
-          label={t("common:actions.filter")}
-          value={filterText}
-          onChange={(e) => dispatch(setFilterText(e.target.value))}
-          fullWidth
-        />
-      </Stack>
+          <Button
+            variant="contained"
+            startIcon={<RefreshIcon />}
+            onClick={() => dispatch(fetchKnownDevices())}
+            sx={{ alignSelf: { xs: "flex-start", sm: "auto" } }}
+          >
+            {t("common:actions.refresh")}
+          </Button>
+        </Stack>
 
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ width: "100%", height: 420, minWidth: 0 }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            getRowId={getRowKey}
-            loading={loading}
-            // ✅ Keep DataGrid’s selection system out of it (we do our own “selected” highlight)
-            rowSelection={false}
-            disableRowSelectionOnClick
-            hideFooterSelectedRowCount
-            onRowClick={(params) =>
-              dispatch(selectKnownDevice(String(params.id)))
-            }
-            getRowClassName={(params) =>
-              String(params.id) === String(selectedKey ?? "")
-                ? "rtl433dp-row-selected"
-                : ""
-            }
-            sx={{
-              "& .rtl433dp-row-selected": {
-                backgroundColor: "action.selected",
-              },
-              "& .rtl433dp-row-selected:hover": {
-                backgroundColor: "action.selected",
-              },
-            }}
-            initialState={{
-              pagination: { paginationModel: { pageSize: 100, page: 0 } },
-            }}
-            pageSizeOptions={[25, 50, 100]}
-          />
-        </Box>
-      </Paper>
-    </Box>
+        <Paper sx={{ p: 2, width: "100%", overflowX: "auto" }}>
+          <Stack direction="column" spacing={2} alignItems="stretch">
+            <DataGridFilter
+              canFilter={true}
+              filterText={filterText}
+              onChange={(e) => dispatch(setFilterText(e.target.value))}
+            />
+
+            <Box sx={{ width: "100%", height: 420, minWidth: 900 }}>
+              <DataGrid
+                rows={rows}
+                columns={columns}
+                getRowId={getRowKey}
+                loading={loading}
+                // ✅ Keep DataGrid’s selection system out of it (we do our own “selected” highlight)
+                rowSelection={false}
+                disableRowSelectionOnClick
+                hideFooterSelectedRowCount
+                onRowClick={(params) =>
+                  dispatch(selectKnownDevice(String(params.id)))
+                }
+                getRowClassName={(params) =>
+                  String(params.id) === String(selectedKey ?? "")
+                    ? "rtl433dp-row-selected"
+                    : ""
+                }
+                sx={{
+                  "& .rtl433dp-row-selected": {
+                    backgroundColor: "action.selected",
+                  },
+                  "& .rtl433dp-row-selected:hover": {
+                    backgroundColor: "action.selected",
+                  },
+                }}
+                initialState={{
+                  pagination: { paginationModel: { pageSize: 100, page: 0 } },
+                }}
+                pageSizeOptions={[25, 50, 100]}
+              />
+            </Box>
+          </Stack>
+        </Paper>
+      </Box>
+    </Container>
   );
 }

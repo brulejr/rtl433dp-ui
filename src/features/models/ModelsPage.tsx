@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Container,
   Drawer,
   Paper,
   Stack,
@@ -96,73 +97,79 @@ export function ModelsPage() {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="h4">Models</Typography>
-
-        <Button
-          variant="contained"
-          startIcon={<RefreshIcon />}
-          onClick={onRefresh}
-          disabled={!canList}
+    <Container maxWidth="lg" sx={{ py: 2 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ xs: "stretch", sm: "center" }}
+          justifyContent="space-between"
         >
-          {t("models:list.refresh")}
-        </Button>
-      </Stack>
+          <Typography variant="h4">Models</Typography>
 
-      {!canList && (
-        <Alert severity="warning">{t("models:errcode.MODL001")}</Alert>
-      )}
-
-      {!!error && <Alert severity="error">{error}</Alert>}
-
-      {/* Grid */}
-      <Paper sx={{ p: 2 }}>
-        <Stack direction="column" spacing={2} alignItems="center">
-          <DataGridFilter
-            canFilter={canList}
-            filterText={filterText}
-            onChange={(e) => dispatch(setFilterText(e.target.value))}
-          />
-          <Box sx={{ width: "100%", height: 520, minWidth: 0 }}>
-            <ModelsDataGrid />
-          </Box>
+          <Button
+            variant="contained"
+            startIcon={<RefreshIcon />}
+            onClick={onRefresh}
+            disabled={!canList}
+            sx={{ alignSelf: { xs: "flex-start", sm: "auto" } }}
+          >
+            {t("models:list.refresh")}
+          </Button>
         </Stack>
-      </Paper>
 
-      {/* Details drawer */}
-      <Drawer
-        anchor="right"
-        open={detailsOpen}
-        onClose={() => dispatch(setDetailsOpen(false))}
-        PaperProps={{
-          sx: () => ({
-            width: { xs: "100%", sm: 520 },
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            borderLeft: 1,
-            borderColor: "divider",
-            borderRadius: 0,
+        {!canList && (
+          <Alert severity="warning">{t("models:errcode.MODL001")}</Alert>
+        )}
 
-            // ✅ Offset drawer below your top AppBar (56px mobile, 64px desktop)
-            top: { xs: 56, sm: 64 },
-            height: { xs: "calc(100% - 56px)", sm: "calc(100% - 64px)" },
+        {!!error && <Alert severity="error">{error}</Alert>}
 
-            // optional: if you have a different toolbar height, use theme:
-            // top: { xs: theme.spacing(7), sm: theme.spacing(8) },
-            // height: { xs: `calc(100% - ${theme.spacing(7)})`, sm: `calc(100% - ${theme.spacing(8)})` },
-          }),
-        }}
-      >
-        <ModelDetailsPage
-          fingerprint={selectedFingerprint}
-          modelName={selectedModelName}
-          canGet={canGet}
-          canUpdate={canUpdate}
+        {/* Grid */}
+        <Paper sx={{ p: 2, width: "100%", overflowX: "auto" }}>
+          <Stack direction="column" spacing={2} alignItems="stretch">
+            <DataGridFilter
+              canFilter={canList}
+              filterText={filterText}
+              onChange={(e) => dispatch(setFilterText(e.target.value))}
+            />
+
+            {/* Keep a stable height like before, but allow horizontal scroll if needed */}
+            <Box sx={{ width: "100%", height: 520, minWidth: 900 }}>
+              <ModelsDataGrid />
+            </Box>
+          </Stack>
+        </Paper>
+
+        {/* Details drawer */}
+        <Drawer
+          anchor="right"
+          open={detailsOpen}
           onClose={() => dispatch(setDetailsOpen(false))}
-        />
-      </Drawer>
-    </Box>
+          PaperProps={{
+            sx: () => ({
+              width: { xs: "100%", sm: 520 },
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              borderLeft: 1,
+              borderColor: "divider",
+              borderRadius: 0,
+
+              // ✅ Offset drawer below your top AppBar (56px mobile, 64px desktop)
+              top: { xs: 56, sm: 64 },
+              height: { xs: "calc(100% - 56px)", sm: "calc(100% - 64px)" },
+            }),
+          }}
+        >
+          <ModelDetailsPage
+            fingerprint={selectedFingerprint}
+            modelName={selectedModelName}
+            canGet={canGet}
+            canUpdate={canUpdate}
+            onClose={() => dispatch(setDetailsOpen(false))}
+          />
+        </Drawer>
+      </Box>
+    </Container>
   );
 }
