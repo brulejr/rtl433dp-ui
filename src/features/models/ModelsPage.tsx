@@ -18,40 +18,22 @@ import { useAuth } from "../../auth/AuthProvider";
 
 import {
   fetchModels,
-  searchModels,
   selectModelsError,
   selectModelsItems,
 } from "./modelsDataSlice";
 
 import {
   clearSelection,
-  resetSearch,
   selectModelsDetailsOpen,
   selectModelsFilterText,
-  selectModelsSearchJson,
   selectModelsSelectedFingerprint,
   setDetailsOpen,
   setFilterText,
-  setSearchJson,
 } from "./modelsSlice";
 
 import { DataGridFilter } from "../../components/DataGridFilter";
-import { DataGridSearch } from "../../components/DataGridSearch";
 import { ModelsDataGrid } from "./ModelsDataGrid";
 import { ModelDetailsPage } from "./ModelDetailsPage";
-
-function safeJsonParse(
-  text: string,
-): { ok: true; value: unknown } | { ok: false; error: string } {
-  const trimmed = (text ?? "").trim();
-  if (!trimmed) return { ok: true, value: {} };
-
-  try {
-    return { ok: true, value: JSON.parse(trimmed) };
-  } catch (e: any) {
-    return { ok: false, error: e?.message ?? "Invalid JSON" };
-  }
-}
 
 export function ModelsPage() {
   const { t } = useTranslation(["common", "models"]);
@@ -60,7 +42,6 @@ export function ModelsPage() {
 
   // permissions
   const canList = auth.hasPermission("model:list");
-  const canSearch = auth.hasPermission("model:search");
   const canGet = auth.hasPermission("model:get");
   const canUpdate = auth.hasPermission("model:update");
 
@@ -68,7 +49,6 @@ export function ModelsPage() {
   const error = useAppSelector(selectModelsError);
 
   const filterText = useAppSelector(selectModelsFilterText);
-  const searchJson = useAppSelector(selectModelsSearchJson);
 
   const selectedFingerprint = useAppSelector(selectModelsSelectedFingerprint);
   const detailsOpen = useAppSelector(selectModelsDetailsOpen);
@@ -115,18 +95,6 @@ export function ModelsPage() {
     dispatch(fetchModels());
   };
 
-  const onSearch = () => {
-    if (!canSearch) return;
-    const parsed = safeJsonParse(searchJson);
-    if (!parsed.ok) return;
-    dispatch(searchModels({ body: parsed.value }));
-  };
-
-  const onReset = () => {
-    dispatch(resetSearch());
-    if (canList) dispatch(fetchModels());
-  };
-
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -148,31 +116,18 @@ export function ModelsPage() {
 
       {!!error && <Alert severity="error">{error}</Alert>}
 
-      {/* Search + Filter */}
+      {/* Grid */}
       <Paper sx={{ p: 2 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack direction="column" spacing={2} alignItems="center">
           <DataGridFilter
             canFilter={canList}
             filterText={filterText}
             onChange={(e) => dispatch(setFilterText(e.target.value))}
           />
+          <Box sx={{ width: "100%", height: 520, minWidth: 0 }}>
+            <ModelsDataGrid />
+          </Box>
         </Stack>
-
-        <Box sx={{ mt: 2 }}>
-          <DataGridSearch
-            searchJson={searchJson}
-            onChange={(e) => dispatch(setSearchJson(e.target.value))}
-            onReset={onReset}
-            onSearch={onSearch}
-          />
-        </Box>
-      </Paper>
-
-      {/* Grid */}
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ width: "100%", height: 520, minWidth: 0 }}>
-          <ModelsDataGrid />
-        </Box>
       </Paper>
 
       {/* Details drawer */}
@@ -181,7 +136,7 @@ export function ModelsPage() {
         open={detailsOpen}
         onClose={() => dispatch(setDetailsOpen(false))}
         PaperProps={{
-          sx: (theme) => ({
+          sx: () => ({
             width: { xs: "100%", sm: 520 },
             display: "flex",
             flexDirection: "column",
