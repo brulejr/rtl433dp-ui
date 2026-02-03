@@ -11,13 +11,13 @@ import {
   type KnownDevice,
 } from "./knownDevicesDataSlice";
 import {
+  clearSelection,
   selectKnownDevice,
   selectKnownDevicesFilterText,
   selectKnownDevicesSelectedKey,
 } from "./knownDevicesSlice";
 
 function getRowId(d: KnownDevice): string {
-  // ✅ fingerprint is the canonical unique identity
   return String(d.fingerprint);
 }
 
@@ -114,7 +114,20 @@ export function KnownDevicesDataGrid() {
       rowSelection={false as any}
       disableRowSelectionOnClick
       hideFooterSelectedRowCount
-      onRowClick={(params) => dispatch(selectKnownDevice(String(params.id)))}
+      onRowClick={(params) => {
+        const clickedId = String(params.id);
+        if (clickedId === String(selectedKey ?? "")) {
+          dispatch(clearSelection());
+        } else {
+          dispatch(selectKnownDevice(clickedId));
+        }
+      }}
+      onCellKeyDown={(_params, event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          dispatch(clearSelection());
+        }
+      }}
       getRowClassName={(params) => {
         const stripe =
           params.indexRelativeToCurrentPage % 2 === 0
