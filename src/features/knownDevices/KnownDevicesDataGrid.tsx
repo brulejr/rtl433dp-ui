@@ -13,10 +13,19 @@ import {
 import {
   selectKnownDevice,
   selectKnownDevicesFilterText,
+  selectKnownDevicesSelectedKey,
 } from "./knownDevicesSlice";
 
-function getRowId(m: KnownDevice): string {
-  return String(m.id ?? "");
+function getRowId(d: KnownDevice): string {
+  // ✅ fingerprint is the canonical unique identity
+  return String(d.fingerprint);
+}
+
+function formatZuluNoMillis(v: unknown): string {
+  if (!v) return "";
+  const ms = Date.parse(String(v));
+  if (!Number.isFinite(ms)) return String(v);
+  return new Date(ms).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 export function KnownDevicesDataGrid() {
@@ -25,8 +34,8 @@ export function KnownDevicesDataGrid() {
 
   const items = useAppSelector(selectKnownDevicesItems);
   const status = useAppSelector(selectKnownDevicesStatus);
-
   const filterText = useAppSelector(selectKnownDevicesFilterText);
+  const selectedKey = useAppSelector(selectKnownDevicesSelectedKey);
 
   const loading = status === "loading";
 
@@ -41,43 +50,56 @@ export function KnownDevicesDataGrid() {
       {
         field: "deviceId",
         headerName: t("knownDevices:fields.deviceId"),
-        flex: 0.6,
+        flex: 0.7,
         minWidth: 140,
       },
       {
         field: "name",
         headerName: t("knownDevices:fields.name"),
         flex: 1,
-        minWidth: 140,
+        minWidth: 160,
       },
       {
         field: "type",
         headerName: t("knownDevices:fields.type"),
-        flex: 0.6,
+        flex: 0.7,
         minWidth: 140,
       },
       {
         field: "area",
         headerName: t("knownDevices:fields.area"),
-        flex: 0.6,
+        flex: 0.7,
         minWidth: 140,
       },
       {
         field: "time",
         headerName: t("knownDevices:fields.time"),
         flex: 1.2,
-        minWidth: 140,
+        minWidth: 180,
+        valueFormatter: (value) => formatZuluNoMillis(value),
       },
     ],
-    [],
+    [t],
   );
 
   const rows = React.useMemo(() => {
     const f = (filterText ?? "").trim().toLowerCase();
     if (!f) return items;
 
-    return items.filter((m) => {
-      const hay = [m.model, m.id].filter(Boolean).join(" ").toLowerCase();
+    return items.filter((d) => {
+      const hay = [
+        d.model,
+        d.deviceId,
+        d.fingerprint,
+        d.name,
+        d.type,
+        d.area,
+        d.time,
+      ]
+        .filter((x) => x !== null && x !== undefined)
+        .join(" ")
+        .toLowerCase();
+
       return hay.includes(f);
     });
   }, [items, filterText]);
@@ -99,7 +121,20 @@ export function KnownDevicesDataGrid() {
             ? "rtl433dp-row-even"
             : "rtl433dp-row-odd";
 
-        return stripe;
+        const selected =
+          String(params.id) === String(selectedKey ?? "")
+            ? " rtl433dp-row-selected"
+            : "";
+
+        return `${stripe}${selected}`;
+      }}
+      sx={{
+        "& .rtl433dp-row-selected": {
+          backgroundColor: "action.selected",
+        },
+        "& .rtl433dp-row-selected:hover": {
+          backgroundColor: "action.selected",
+        },
       }}
       initialState={{
         pagination: { paginationModel: { pageSize: 50, page: 0 } },
