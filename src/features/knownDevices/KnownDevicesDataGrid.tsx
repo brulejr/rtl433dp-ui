@@ -1,6 +1,6 @@
 // src/features/knownDevices/KnownDevicesDataGrid.tsx
 import * as React from "react";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+import { type GridColDef } from "@mui/x-data-grid";
 
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
@@ -16,6 +16,8 @@ import {
   selectKnownDevicesFilterText,
   selectKnownDevicesSelectedKey,
 } from "./knownDevicesSlice";
+
+import { EntityDataGrid } from "../../components/EntityDataGrid";
 
 function getRowId(d: KnownDevice): string {
   return String(d.fingerprint);
@@ -82,76 +84,33 @@ export function KnownDevicesDataGrid() {
     [t],
   );
 
-  const rows = React.useMemo(() => {
-    const f = (filterText ?? "").trim().toLowerCase();
-    if (!f) return items;
-
-    return items.filter((d) => {
-      const hay = [
-        d.model,
-        d.deviceId,
-        d.fingerprint,
-        d.name,
-        d.type,
-        d.area,
-        d.time,
-      ]
-        .filter((x) => x !== null && x !== undefined)
-        .join(" ")
-        .toLowerCase();
-
-      return hay.includes(f);
-    });
-  }, [items, filterText]);
-
   return (
-    <DataGrid
-      rows={rows ?? []}
+    <EntityDataGrid<KnownDevice>
+      rows={items ?? []}
       columns={columns}
       getRowId={getRowId}
       loading={loading}
-      // DO NOT use DataGrid selection system at all
-      rowSelection={false as any}
-      disableRowSelectionOnClick
-      hideFooterSelectedRowCount
-      onRowClick={(params) => {
-        const clickedId = String(params.id);
-        if (clickedId === String(selectedKey ?? "")) {
-          dispatch(clearSelection());
-        } else {
-          dispatch(selectKnownDevice(clickedId));
-        }
-      }}
-      onCellKeyDown={(_params, event) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          dispatch(clearSelection());
-        }
-      }}
-      getRowClassName={(params) => {
-        const stripe =
-          params.indexRelativeToCurrentPage % 2 === 0
-            ? "rtl433dp-row-even"
-            : "rtl433dp-row-odd";
+      filterText={filterText}
+      filterPredicate={(d, f) => {
+        const hay = [
+          d.model,
+          d.deviceId,
+          d.fingerprint,
+          d.name,
+          d.type,
+          d.area,
+          d.time,
+        ]
+          .filter((x) => x !== null && x !== undefined)
+          .join(" ")
+          .toLowerCase();
 
-        const selected =
-          String(params.id) === String(selectedKey ?? "")
-            ? " rtl433dp-row-selected"
-            : "";
-
-        return `${stripe}${selected}`;
+        return hay.includes(f);
       }}
-      sx={{
-        "& .rtl433dp-row-selected": {
-          backgroundColor: "action.selected",
-        },
-        "& .rtl433dp-row-selected:hover": {
-          backgroundColor: "action.selected",
-        },
-      }}
-      initialState={{
-        pagination: { paginationModel: { pageSize: 50, page: 0 } },
-      }}
+      selectedId={selectedKey}
+      onSelect={(id) => dispatch(selectKnownDevice(id))}
+      onClear={() => dispatch(clearSelection())}
+      initialPageSize={50}
       pageSizeOptions={[25, 50, 100]}
     />
   );

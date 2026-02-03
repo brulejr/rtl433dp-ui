@@ -1,6 +1,6 @@
 // src/features/models/ModelsDataGrid.tsx
 import * as React from "react";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+import { type GridColDef } from "@mui/x-data-grid";
 
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
@@ -12,24 +12,25 @@ import {
 } from "./modelsDataSlice";
 
 import {
+  clearSelection,
   selectModel,
   selectModelsFilterText,
   selectModelsSelectedFingerprint,
 } from "./modelsSlice";
+
+import { EntityDataGrid } from "../../components/EntityDataGrid";
 
 function getRowId(m: ModelSummary): string {
   return String(m.fingerprint ?? "");
 }
 
 export function ModelsDataGrid() {
-  const { t } = useTranslation(["common"]);
+  const { t } = useTranslation(["common", "models"]);
   const dispatch = useAppDispatch();
 
   const items = useAppSelector(selectModelsItems);
   const status = useAppSelector(selectModelsStatus);
-
   const filterText = useAppSelector(selectModelsFilterText);
-
   const selectedFingerprint = useAppSelector(selectModelsSelectedFingerprint);
 
   const loading = status === "loading";
@@ -55,46 +56,27 @@ export function ModelsDataGrid() {
         minWidth: 280,
       },
     ],
-    [],
+    [t],
   );
 
-  const rows = React.useMemo(() => {
-    const f = (filterText ?? "").trim().toLowerCase();
-    if (!f) return items;
-
-    return items.filter((m) => {
-      const hay = [m.model, m.fingerprint]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(f);
-    });
-  }, [items, filterText]);
-
   return (
-    <DataGrid
-      rows={rows ?? []}
+    <EntityDataGrid<ModelSummary>
+      rows={items ?? []}
       columns={columns}
       getRowId={getRowId}
       loading={loading}
-      // DO NOT use DataGrid selection system at all
-      rowSelection={false as any}
-      disableRowSelectionOnClick
-      hideFooterSelectedRowCount
-      onRowClick={(params) => dispatch(selectModel(String(params.id)))}
-      getRowClassName={(params) => {
-        const isSelected =
-          String(params.id) === String(selectedFingerprint ?? "");
-        const stripe =
-          params.indexRelativeToCurrentPage % 2 === 0
-            ? "rtl433dp-row-even"
-            : "rtl433dp-row-odd";
-
-        return isSelected ? `rtl433dp-row-selected ${stripe}` : stripe;
+      filterText={filterText}
+      filterPredicate={(m, f) => {
+        const hay = [m.model, m.fingerprint]
+          .filter((x) => x !== null && x !== undefined)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(f);
       }}
-      initialState={{
-        pagination: { paginationModel: { pageSize: 50, page: 0 } },
-      }}
+      selectedId={selectedFingerprint}
+      onSelect={(id) => dispatch(selectModel(id))}
+      onClear={() => dispatch(clearSelection())}
+      initialPageSize={50}
       pageSizeOptions={[25, 50, 100]}
     />
   );
