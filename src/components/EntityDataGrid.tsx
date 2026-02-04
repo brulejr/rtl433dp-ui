@@ -124,12 +124,18 @@ export function EntityDataGrid<T extends object>({
         return `${stripe}${selected}`;
       }}
       sx={{
+        /* ✅ Hide header column separators (the vertical bars) */
+        "& .MuiDataGrid-columnSeparator": {
+          display: "none",
+        },
+
         "& .rtl433dp-row-selected": {
           backgroundColor: "action.selected",
         },
         "& .rtl433dp-row-selected:hover": {
           backgroundColor: "action.selected",
         },
+
         ...sx,
       }}
       initialState={{
