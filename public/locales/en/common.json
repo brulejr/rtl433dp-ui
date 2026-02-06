@@ -12,16 +12,27 @@
     "signingIn": "Signing you in\u2026"
   },
   "actions": {
-    "refresh": "Refresh",
-    "save": "Save",
     "cancel": "Cancel",
-    "promote": "Promote"
+    "close": "Close",
+    "filter": "Filter",
+    "promote": "Promote",
+    "refresh": "Refresh",
+    "reset": "Reset",
+    "save": "Save",
+    "search": "Search",
+    "submit": "Submit",
+    "update": "Update"
   },
   "errors": {
     "generic": "Something went wrong.",
     "unauthorized": "You are not authorized to perform this action."
   },
   "labels": {
-    "language": "Language"
+    "dark": "Dark",
+    "language": "Language",
+    "light": "Light",
+    "search": "Search",
+    "searchHelperText": "Provide JSON body for advanced model search.",
+    "theme": "Theme"
   }
 }

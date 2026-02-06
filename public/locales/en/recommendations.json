@@ -4,7 +4,9 @@
     "empty": "No recommendation candidates found."
   },
   "promote": {
-    "title": "Promote recommendation",
+    "title": "Promote Recommendation",
+    "model": "Model",
+    "id": "ID",
     "name": "Name",
     "area": "Area",
     "deviceType": "Device type",

@@ -2,5 +2,13 @@
   "title": "Known Devices",
   "list": {
     "empty": "No known devices found."
+  },
+  "fields": {
+    "model": "Model",
+    "deviceId": "Device ID",
+    "name": "Name",
+    "type": "Type",
+    "area": "Area",
+    "time": "Last Seen"
   }
 }

@@ -7,8 +7,11 @@ import sessionReducer from "../features/session/sessionSlice";
 import toastsReducer from "../features/toasts/toastsSlice";
 
 import knownDevicesReducer from "../features/knownDevices/knownDevicesSlice";
+import knownDevicesDataReducer from "../features/knownDevices/knownDevicesDataSlice";
 import modelsReducer from "../features/models/modelsSlice";
+import modelsDataReducer from "../features/models/modelsDataSlice";
 import recommendationsUiReducer from "../features/recommendations/recommendationsSlice";
+import recommendationsDataReducer from "../features/recommendations/recommendationsDataSlice";
 
 import { baseApi } from "../services/api/baseApi";
 
@@ -22,8 +25,11 @@ export const store = configureStore({
 
     // feature slices
     knownDevices: knownDevicesReducer,
+    knownDevicesData: knownDevicesDataReducer,
     models: modelsReducer,
+    modelsData: modelsDataReducer,
     recommendationsUi: recommendationsUiReducer,
+    recommendationsData: recommendationsDataReducer,
 
     // RTK Query
     [baseApi.reducerPath]: baseApi.reducer,

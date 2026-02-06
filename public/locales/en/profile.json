@@ -1,0 +1,17 @@
+{
+    "title": "Profile",
+    "chips": {
+        "permissions": "Permissions: {{count}}"
+    },
+    "sections": {
+        "debug": "Debug"
+    },
+    "fields": {
+        "sub": "Sub ???",
+        "preferredUsername": " Preferred Username",
+        "name": "Name",
+        "email": "Email Address",
+        "permissions": "Permissions",
+        "accessToken": "Access Token (preview)"
+    }
+}

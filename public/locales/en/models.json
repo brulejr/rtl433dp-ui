@@ -1,7 +1,8 @@
 {
   "title": "Models",
   "list": {
-    "empty": "No models found."
+    "empty": "No models found.",
+    "refresh": "Refresh"
   },
   "search": {
     "title": "Search",
@@ -15,6 +16,29 @@
   },
   "fields": {
     "modelName": "Model",
-    "fingerprint": "Fingerprint"
+    "category": "Category",
+    "fingerprint": "Fingerprint",
+    "jsonStructure": "JSON Structure",
+    "sensors": "Sensors"
+  },
+  "sensors": {
+    "title": "Update sensors",
+    "fields": {
+      "sensorPayload": {
+        "label": "Sensors payload (JSON)",
+        "helperText": "Edit the sensors payload. This is sent as JSON to the backend."
+      }
+    }
+  },
+  "errorcode": {
+    "MODL001": "You do not have permission to view Models.",
+    "MODL002": "You do not have permission to view Model Details.",
+    "MODL003": "You do not have permission to update Model Sensors."
+  },
+  "messages": {
+    "loadingDetails": "Loading details…",
+    "noDetailsLoadedYet": "No details loaded yet.",
+    "noSensorsDefined": "No sensors defined for this model.",
+    "selectModelForDetails": "Select a model to see details."
   }
 }

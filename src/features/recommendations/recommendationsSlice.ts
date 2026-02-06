@@ -1,6 +1,7 @@
+// src/features/recommendations/recommendationsSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../../app/store";
-import type { RecommendationCandidate } from "./recommendationsApi";
+import type { Recommendation } from "./recommendationsDataSlice";
 
 export type PromoteFormState = {
   name: string;
@@ -9,12 +10,20 @@ export type PromoteFormState = {
 };
 
 type RecommendationsUiState = {
+  // ✅ table UI
+  filterText: string;
+  selectedDeviceFingerprint: string | null;
+
+  // ✅ promote dialog UI
   promoteOpen: boolean;
-  selected: RecommendationCandidate | null;
+  selected: Recommendation | null;
   promoteForm: PromoteFormState;
 };
 
 const initialState: RecommendationsUiState = {
+  filterText: "",
+  selectedDeviceFingerprint: null,
+
   promoteOpen: false,
   selected: null,
   promoteForm: {
@@ -28,10 +37,39 @@ const recommendationsSlice = createSlice({
   name: "recommendationsUi",
   initialState,
   reducers: {
-    openPromote(state, action: PayloadAction<RecommendationCandidate>) {
+    // =========================
+    // Table UI (like Models)
+    // =========================
+    setFilterText(state, action: PayloadAction<string>) {
+      state.filterText = action.payload ?? "";
+
+      // Optional but nice: if the filter changes, selection is often invalidated.
+      // We keep it and let the grid auto-clear if needed (same behavior as other pages).
+      // If you want immediate clear, uncomment:
+      // state.selectedDeviceFingerprint = null;
+    },
+
+    setSelectedDeviceFingerprint(state, action: PayloadAction<string>) {
+      const v = String(action.payload ?? "").trim();
+      state.selectedDeviceFingerprint = v ? v : null;
+    },
+
+    clearSelection(state) {
+      state.selectedDeviceFingerprint = null;
+    },
+
+    // =========================
+    // Promote dialog UI
+    // =========================
+    openPromote(state, action: PayloadAction<Recommendation>) {
       state.promoteOpen = true;
       state.selected = action.payload;
-      // keep any previous form values? usually better to reset for clarity:
+
+      // Keep grid selection in sync with the opened item (nice UX)
+      state.selectedDeviceFingerprint =
+        action.payload?.deviceFingerprint ?? state.selectedDeviceFingerprint;
+
+      // Reset for clarity
       state.promoteForm = { name: "", area: "", deviceType: "" };
     },
 
@@ -54,6 +92,9 @@ const recommendationsSlice = createSlice({
 });
 
 export const {
+  setFilterText,
+  setSelectedDeviceFingerprint,
+  clearSelection,
   openPromote,
   closePromote,
   setPromoteField,
@@ -63,6 +104,12 @@ export const {
 export default recommendationsSlice.reducer;
 
 // selectors
+export const selectRecommendationsFilterText = (s: RootState) =>
+  s.recommendationsUi.filterText;
+
+export const selectRecommendationsSelectedDeviceFingerprint = (s: RootState) =>
+  s.recommendationsUi.selectedDeviceFingerprint;
+
 export const selectPromoteOpen = (s: RootState) => s.recommendationsUi.promoteOpen;
 export const selectSelectedCandidate = (s: RootState) => s.recommendationsUi.selected;
 export const selectPromoteForm = (s: RootState) => s.recommendationsUi.promoteForm;
