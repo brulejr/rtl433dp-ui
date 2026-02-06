@@ -134,45 +134,81 @@ export function AppLayout() {
   ].filter((x) => x.show !== false);
 
   const drawer = (
-    <Box sx={{ height: "100%" }}>
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Spacer so drawer content starts below the fixed AppBar */}
       <Toolbar />
       <Divider />
 
-      <List sx={{ px: 1, py: 1 }}>
-        {navItems.map((item) => (
+      {/* Nav list (scrollable) */}
+      <Box sx={{ flex: 1, overflowY: "auto" }}>
+        <List sx={{ px: 1, py: 1 }}>
+          {navItems.map((item) => (
+            <ListItemButton
+              key={item.to}
+              component={NavLink}
+              to={item.to}
+              onClick={() => setMobileOpen(false)}
+              sx={{
+                borderRadius: 2,
+                mb: 0.5,
+                justifyContent: navCollapsed ? "center" : "flex-start",
+                px: navCollapsed ? 1 : 2,
+                "&.active": { bgcolor: "action.selected" },
+              }}
+            >
+              <Tooltip
+                title={navCollapsed ? item.label : ""}
+                placement="right"
+                arrow
+              >
+                <ListItemIcon sx={{ minWidth: navCollapsed ? "auto" : 40 }}>
+                  {item.icon}
+                </ListItemIcon>
+              </Tooltip>
+
+              {!navCollapsed && <ListItemText primary={item.label} />}
+            </ListItemButton>
+          ))}
+        </List>
+      </Box>
+
+      {/* Bottom collapse/expand control (no divider above it) */}
+      <Box sx={{ p: 1 }}>
+        <Tooltip
+          title={navCollapsed ? "Expand navigation" : "Collapse navigation"}
+          placement="right"
+          arrow
+        >
           <ListItemButton
-            key={item.to}
-            component={NavLink}
-            to={item.to}
-            onClick={() => setMobileOpen(false)}
+            onClick={toggleNavCollapsed}
             sx={{
               borderRadius: 2,
-              mb: 0.5,
               justifyContent: navCollapsed ? "center" : "flex-start",
               px: navCollapsed ? 1 : 2,
-              "&.active": { bgcolor: "action.selected" },
             }}
+            aria-label={
+              navCollapsed ? "Expand navigation" : "Collapse navigation"
+            }
           >
-            <Tooltip
-              title={navCollapsed ? item.label : ""}
-              placement="right"
-              arrow
-            >
-              <ListItemIcon sx={{ minWidth: navCollapsed ? "auto" : 40 }}>
-                {item.icon}
-              </ListItemIcon>
-            </Tooltip>
-
-            {!navCollapsed && <ListItemText primary={item.label} />}
+            <ListItemIcon sx={{ minWidth: navCollapsed ? "auto" : 40 }}>
+              {navCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+            </ListItemIcon>
+            {!navCollapsed && <ListItemText primary="Collapse navigation" />}
           </ListItemButton>
-        ))}
-      </List>
+        </Tooltip>
+      </Box>
     </Box>
   );
 
   return (
-    <Box sx={{ display: "flex", width: "100%", overflowX: "hidden" }}>
+    <Box
+      sx={{
+        display: "flex",
+        width: "100%",
+        overflowX: "hidden",
+        minHeight: "100vh",
+      }}
+    >
       <AppBar
         position="fixed"
         sx={{
@@ -200,24 +236,6 @@ export function AppLayout() {
               aria-label="open navigation"
             >
               <MenuIcon />
-            </IconButton>
-          </Tooltip>
-
-          {/* Desktop collapse toggle */}
-          <Tooltip
-            title={navCollapsed ? "Expand navigation" : "Collapse navigation"}
-            placement="bottom"
-            arrow
-          >
-            <IconButton
-              color="inherit"
-              onClick={toggleNavCollapsed}
-              sx={{ mr: 1, display: { xs: "none", md: "inline-flex" } }}
-              aria-label={
-                navCollapsed ? "Expand navigation" : "Collapse navigation"
-              }
-            >
-              {navCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
             </IconButton>
           </Tooltip>
 
@@ -271,7 +289,10 @@ export function AppLayout() {
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: "block", md: "none" },
-          "& .MuiDrawer-paper": { width: drawerWidthExpanded },
+          "& .MuiDrawer-paper": {
+            width: drawerWidthExpanded,
+            height: "100vh",
+          },
         }}
       >
         {drawer}
@@ -289,7 +310,7 @@ export function AppLayout() {
             width: drawerWidth,
             boxSizing: "border-box",
             overflowX: "hidden",
-            position: "relative", // prevents overlay/cropping
+            height: "100vh",
             transition: (theme) =>
               theme.transitions.create("width", {
                 easing: theme.transitions.easing.sharp,
