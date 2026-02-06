@@ -5,13 +5,8 @@ import {
   Box,
   Button,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Paper,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -41,11 +36,7 @@ import {
 
 import { DataGridFilter } from "../../components/DataGridFilter";
 import { RecommendationsDataGrid } from "./RecommendationsDataGrid";
-
-function safeString(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  return String(v);
-}
+import { RecommendationsPromoteDialog } from "./RecommendationsPromoteDialog";
 
 export function RecommendationsPage() {
   const { t } = useTranslation(["common", "recommendations"]);
@@ -150,94 +141,18 @@ export function RecommendationsPage() {
           </Stack>
         </Paper>
 
-        {canPromote && promoteOpen && selected && (
-          <Dialog
-            open={promoteOpen}
-            onClose={onClosePromote}
-            maxWidth="sm"
-            fullWidth
-          >
-            <DialogTitle>{t("recommendations:promote.title")}</DialogTitle>
-
-            <DialogContent>
-              <Box sx={{ mt: 1, mb: 2, opacity: 0.85 }}>
-                <div>
-                  <strong>Model:</strong> {safeString(selected.model)}
-                </div>
-                <div>
-                  <strong>ID:</strong> {safeString(selected.id)}
-                </div>
-              </Box>
-
-              <Box component="form" onSubmit={onSubmitPromote}>
-                <Stack spacing={2}>
-                  <TextField
-                    label={t("recommendations:promote.name")}
-                    value={promoteForm.name}
-                    onChange={(e) =>
-                      dispatch(
-                        setPromoteField({
-                          field: "name",
-                          value: e.target.value,
-                        }),
-                      )
-                    }
-                    required
-                    fullWidth
-                    autoFocus
-                  />
-
-                  <TextField
-                    label={t("recommendations:promote.area")}
-                    value={promoteForm.area}
-                    onChange={(e) =>
-                      dispatch(
-                        setPromoteField({
-                          field: "area",
-                          value: e.target.value,
-                        }),
-                      )
-                    }
-                    required
-                    fullWidth
-                  />
-
-                  <TextField
-                    label={t("recommendations:promote.deviceType")}
-                    value={promoteForm.deviceType}
-                    onChange={(e) =>
-                      dispatch(
-                        setPromoteField({
-                          field: "deviceType",
-                          value: e.target.value,
-                        }),
-                      )
-                    }
-                    required
-                    fullWidth
-                  />
-
-                  {!!promoteError && (
-                    <Alert severity="error">{promoteError}</Alert>
-                  )}
-                </Stack>
-
-                <DialogActions sx={{ px: 0, mt: 2 }}>
-                  <Button onClick={onClosePromote} disabled={promoting}>
-                    {t("common:actions.cancel")}
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={promoting}
-                  >
-                    {t("recommendations:promote.submit")}
-                  </Button>
-                </DialogActions>
-              </Box>
-            </DialogContent>
-          </Dialog>
-        )}
+        <RecommendationsPromoteDialog
+          open={!!(canPromote && promoteOpen && selected)}
+          selected={selected ?? null}
+          promoteForm={promoteForm}
+          promoting={promoting}
+          promoteError={promoteError}
+          onClose={onClosePromote}
+          onSubmit={onSubmitPromote}
+          onChangeField={(field, value) =>
+            dispatch(setPromoteField({ field, value }))
+          }
+        />
       </Box>
     </Container>
   );
