@@ -86,14 +86,14 @@ export function RecommendationsPage() {
     if (!canPromote) return;
     if (!selected?.model) return;
 
-    const deviceId = selected.deviceId ?? selected.id;
+    const deviceId = selected.id;
     if (deviceId === undefined || deviceId === null) return;
 
     const res = await dispatch(
       promoteRecommendation({
-        model: selected.model,
-        deviceId,
-        fingerprint: selected.deviceFingerprint,
+        model: selected.model!,
+        deviceId, // ✅ value from selected.id
+        fingerprint: selected.deviceFingerprint, // ✅ if backend expects deviceFingerprint here, rename accordingly
         name: promoteForm.name.trim(),
         area: promoteForm.area.trim(),
         deviceType: promoteForm.deviceType.trim(),

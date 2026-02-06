@@ -1,6 +1,6 @@
 // src/features/recommendations/RecommendationsDataGrid.tsx
 import * as React from "react";
-import { Button } from "@mui/material";
+import { Button, Stack } from "@mui/material";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 import { type GridColDef, type GridRowId } from "@mui/x-data-grid";
 
@@ -45,11 +45,35 @@ export function RecommendationsDataGrid() {
 
   const loading = status === "loading";
 
+  const selectedRow = React.useMemo(() => {
+    const fp = String(selectedId ?? "").trim();
+    if (!fp) return null;
+    return (
+      (items ?? []).find((r) => String(r.deviceFingerprint) === fp) ?? null
+    );
+  }, [items, selectedId]);
+
+  const promoteDisabled = React.useMemo(() => {
+    if (!canPromote) return true;
+    if (!selectedRow) return true;
+
+    // ✅ backend promote needs model + deviceId; here deviceId comes from row.id
+    if (!selectedRow.model) return true;
+    if (selectedRow.id === undefined || selectedRow.id === null) return true;
+
+    return false;
+  }, [canPromote, selectedRow]);
+
+  const onPromote = () => {
+    if (!selectedRow) return;
+    if (promoteDisabled) return;
+    dispatch(openPromote(selectedRow));
+  };
+
   const columns = React.useMemo<GridColDef<Recommendation>[]>(
     () => [
       { field: "model", headerName: "Model", flex: 1, minWidth: 160 },
       { field: "id", headerName: "ID", flex: 0.7, minWidth: 130 },
-
       {
         field: "weight",
         headerName: "Weight",
@@ -71,88 +95,53 @@ export function RecommendationsDataGrid() {
         minWidth: 100,
         type: "number",
       },
-      {
-        field: "lastSeen",
-        headerName: "Last Seen",
-        flex: 1,
-        minWidth: 160,
-        valueGetter: (_value, row) => row?.lastSeen ?? row?.time ?? "",
-      },
-
-      {
-        field: "__actions",
-        headerName: "",
-        sortable: false,
-        filterable: false,
-        width: 170,
-        align: "right",
-        headerAlign: "right",
-        renderCell: (params) => {
-          if (!canPromote) return null;
-
-          const r = params.row as Recommendation;
-
-          // promote requires model + deviceId (backend expects deviceId)
-          const disabled =
-            !r.model || r.deviceId === undefined || r.deviceId === null;
-
-          return (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<SystemUpdateAltIcon />}
-              onClick={() => dispatch(openPromote(r))}
-              disabled={disabled}
-            >
-              {t("common:actions.promote")}
-            </Button>
-          );
-        },
-      },
     ],
-    [canPromote, dispatch, t],
+    [],
   );
 
   return (
-    <EntityDataGrid<Recommendation>
-      rows={items ?? []}
-      columns={columns}
-      getRowId={getRowId}
-      loading={loading}
-      filterText={filterText}
-      filterPredicate={(r, f) => {
-        const hay = [
-          r.source,
-          r.model,
-          r.id,
-          r.deviceId,
-          r.deviceFingerprint,
-          r.weight,
-          r.bucketCount,
-          r.signalStrengthDbm,
-          r.lastSeen,
-          r.time,
-        ]
-          .filter((x) => x !== null && x !== undefined)
-          .join(" ")
-          .toLowerCase();
+    <Stack spacing={1.5}>
+      <Stack direction="row" justifyContent="flex-end">
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<SystemUpdateAltIcon />}
+          onClick={onPromote}
+          disabled={promoteDisabled}
+        >
+          {t("common:actions.promote")}
+        </Button>
+      </Stack>
 
-        return hay.includes(f);
-      }}
-      selectedId={selectedId}
-      onSelect={(id) => dispatch(setSelectedDeviceFingerprint(id))}
-      onClear={() => dispatch(clearSelection())}
-      initialPageSize={100}
-      pageSizeOptions={[25, 50, 100]}
-      sx={{ minWidth: 900 }}
-      dataGridProps={{
-        initialState: {
-          sorting: { sortModel: [{ field: "weight", sort: "desc" }] },
-        },
-        onRowDoubleClick: canPromote
-          ? (params) => dispatch(openPromote(params.row as Recommendation))
-          : undefined,
-      }}
-    />
+      <EntityDataGrid<Recommendation>
+        rows={items ?? []}
+        columns={columns}
+        getRowId={getRowId}
+        loading={loading}
+        filterText={filterText}
+        filterPredicate={(r, f) => {
+          const hay = [
+            r.model,
+            r.id,
+            r.deviceFingerprint,
+            r.modelFingerprint,
+            r.weight,
+            r.bucketCount,
+            r.signalStrengthDbm,
+          ]
+            .filter((x) => x !== null && x !== undefined)
+            .join(" ")
+            .toLowerCase();
+
+          return hay.includes(f);
+        }}
+        selectedId={selectedId}
+        onSelect={(id) => dispatch(setSelectedDeviceFingerprint(id))}
+        onClear={() => dispatch(clearSelection())}
+        initialPageSize={100}
+        pageSizeOptions={[25, 50, 100]}
+        sx={{ minWidth: 900 }}
+      />
+    </Stack>
   );
 }

@@ -5,48 +5,27 @@ import {
   type DataGridProps,
   type GridColDef,
   type GridRowId,
+  type GridRowSelectionModel,
 } from "@mui/x-data-grid";
 
 export type EntityDataGridProps<T extends object> = {
   rows: T[];
   columns: GridColDef<T>[];
-
-  /**
-   * Canonical row id
-   */
   getRowId: (row: T) => GridRowId;
 
-  /**
-   * Loading state for the grid
-   */
   loading?: boolean;
 
-  /**
-   * Optional filter text + predicate.
-   * If provided, EntityDataGrid will compute filtered rows internally.
-   */
   filterText?: string;
   filterPredicate?: (row: T, normalizedFilter: string) => boolean;
 
-  /**
-   * Manual (Redux-driven) selection:
-   * - selectedId is the currently selected row id (stringified compare)
-   * - onSelect toggles selection (called with clicked id)
-   * - onClear clears selection
-   */
+  // ✅ Redux-owned single selection
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   onClear?: () => void;
 
-  /**
-   * Pagination defaults
-   */
   initialPageSize?: number;
   pageSizeOptions?: number[];
 
-  /**
-   * Optional: allow callers to augment DataGrid props/sx
-   */
   sx?: DataGridProps<T>["sx"];
   dataGridProps?: Omit<
     DataGridProps<T>,
@@ -54,10 +33,11 @@ export type EntityDataGridProps<T extends object> = {
     | "columns"
     | "getRowId"
     | "loading"
-    | "onRowClick"
-    | "onCellKeyDown"
-    | "getRowClassName"
     | "rowSelection"
+    | "rowSelectionModel"
+    | "onRowSelectionModelChange"
+    | "getRowClassName"
+    | "onCellKeyDown"
   >;
 };
 
@@ -82,6 +62,15 @@ export function EntityDataGrid<T extends object>({
     return (rows ?? []).filter((r) => filterPredicate(r, f));
   }, [rows, filterText, filterPredicate]);
 
+  // ✅ MUI X v8 selection model shape: { type, ids: Set }
+  const rowSelectionModel = React.useMemo<GridRowSelectionModel>(() => {
+    const id = String(selectedId ?? "").trim();
+    return {
+      type: "include",
+      ids: id ? new Set<GridRowId>([id]) : new Set<GridRowId>(),
+    };
+  }, [selectedId]);
+
   const selectedKeyString = String(selectedId ?? "");
 
   return (
@@ -90,20 +79,23 @@ export function EntityDataGrid<T extends object>({
       columns={columns}
       getRowId={getRowId}
       loading={loading}
-      // ✅ We do manual selection; do not use DataGrid's selection model
-      rowSelection={false as any}
-      disableRowSelectionOnClick
-      hideFooterSelectedRowCount
-      onRowClick={(params) => {
-        if (!onSelect) return;
+      rowSelection
+      // ✅ keep selection fully controlled by Redux
+      rowSelectionModel={rowSelectionModel}
+      onRowSelectionModelChange={(model) => {
+        // model is { type: "include" | "exclude", ids: Set<GridRowId> }
+        const ids =
+          model?.ids instanceof Set ? model.ids : new Set<GridRowId>();
+        const first = ids.size ? Array.from(ids)[0] : undefined;
+        const next = first !== undefined && first !== null ? String(first) : "";
 
-        const clickedId = String(params.id);
-        if (clickedId === selectedKeyString) {
-          onClear?.();
-        } else {
-          onSelect(clickedId);
-        }
+        if (!next) onClear?.();
+        else onSelect?.(next);
       }}
+      // ✅ single selection UX
+      disableMultipleRowSelection
+      checkboxSelection={false}
+      hideFooterSelectedRowCount
       onCellKeyDown={(_params, event) => {
         if (event.key === "Escape") {
           event.preventDefault();
@@ -124,18 +116,11 @@ export function EntityDataGrid<T extends object>({
         return `${stripe}${selected}`;
       }}
       sx={{
-        /* ✅ Hide header column separators (the vertical bars) */
-        "& .MuiDataGrid-columnSeparator": {
-          display: "none",
-        },
-
-        "& .rtl433dp-row-selected": {
-          backgroundColor: "action.selected",
-        },
+        "& .MuiDataGrid-columnSeparator": { display: "none" },
+        "& .rtl433dp-row-selected": { backgroundColor: "action.selected" },
         "& .rtl433dp-row-selected:hover": {
           backgroundColor: "action.selected",
         },
-
         ...sx,
       }}
       initialState={{

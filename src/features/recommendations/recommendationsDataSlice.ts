@@ -11,14 +11,26 @@ import {
 /**
  * Slice-owned model (do NOT export API models from redux).
  * A Recommendation is uniquely identified by deviceFingerprint.
+ *
+ * NOTE:
+ * - Backend payload includes `id` (device id) and `deviceFingerprint` (primary key).
+ * - There is NO `deviceId` field on the Recommendation payload.
+ * - When promoting, the backend expects request field name `deviceId`,
+ *   whose VALUE should come from Recommendation.id.
  */
 export type Recommendation = {
   // ✅ Canonical unique identity for a recommendation
   deviceFingerprint: string;
 
   model?: string;
+
+  /**
+   * Backend "device id" value (string/number).
+   * Use this when building promote requests (as request.deviceId).
+   */
   id?: string | number;
-  deviceId?: string | number;
+
+  modelFingerprint?: string;
 
   source?: string;
 
@@ -94,7 +106,7 @@ function extractDeviceFingerprint(raw: Record<string, unknown>): string | null {
     raw.deviceFingerprint ??
     raw.fingerprint ??
     (raw as any).device_fingerprint ??
-    (raw as any).device_fingerprint;
+    (raw as any).deviceFingerprint;
 
   if (fp === null || fp === undefined) return null;
 
@@ -124,16 +136,17 @@ function canonicalizeRecommendation(
 
     // fields we care about (normalize)
     model: (c as any).model ?? undefined,
+
+    // ✅ payload provides `id` (this is the "device id" value)
     id: (c as any).id ?? undefined,
-    deviceId: (c as any).deviceId ?? (c as any).device_id ?? undefined,
+
+    modelFingerprint: (c as any).modelFingerprint ?? undefined,
 
     source: (c as any).source ?? undefined,
 
     weight: toNumberOrUndefined((c as any).weight),
-    signalStrengthDbm: toNumberOrUndefined(
-      (c as any).signalStrengthDbm ?? (c as any).rssi,
-    ),
-    bucketCount: toNumberOrUndefined((c as any).bucketCount ?? (c as any).frequency),
+    signalStrengthDbm: toNumberOrUndefined((c as any).signalStrengthDbm),
+    bucketCount: toNumberOrUndefined((c as any).bucketCount),
 
     lastSeen: toStringOrUndefined((c as any).lastSeen),
     time: toStringOrUndefined((c as any).time),
