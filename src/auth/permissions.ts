@@ -11,7 +11,7 @@ function b64urlDecode(input: string): string {
   );
 }
 
-export function getPermissionsFromAccessToken(accessToken?: string): string[] {
+export function getPermissionsFromAccessToken(accessToken?: string | null): string[] {
   if (!accessToken) return [];
   const parts = accessToken.split(".");
   if (parts.length < 2) return [];
