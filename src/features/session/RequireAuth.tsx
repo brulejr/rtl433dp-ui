@@ -1,4 +1,4 @@
-import * as React from "react";
+// src/feature/session/RequireAuth.tsx
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 import { useAppSelector } from "../../app/hooks";

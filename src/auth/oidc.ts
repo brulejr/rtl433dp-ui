@@ -23,7 +23,7 @@ const settings: UserManagerSettings = {
   // token lifecycle
   automaticSilentRenew: true,
   monitorSession: true,
-  accessTokenExpiringNotificationTime: 30,
+  accessTokenExpiringNotificationTimeInSeconds: 30,
 };
 
 export const userManager = new UserManager(settings);
