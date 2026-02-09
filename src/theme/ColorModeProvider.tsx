@@ -1,10 +1,11 @@
 // src/theme/ColorModeProvider.tsx
 import * as React from "react";
 import {
+  CssBaseline,
+  Theme,
+  ThemeProvider,
   alpha,
   createTheme,
-  ThemeProvider,
-  CssBaseline,
   useMediaQuery,
 } from "@mui/material";
 
@@ -51,7 +52,7 @@ export function ColorModeProvider({ children }: { children: React.ReactNode }) {
 
           MuiDataGrid: {
             styleOverrides: {
-              root: ({ theme }) => {
+              root: ({ theme }: { theme: Theme }) => {
                 const isDark = theme.palette.mode === "dark";
 
                 // Zebra + selected tuning
