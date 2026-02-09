@@ -264,7 +264,7 @@ export function SensorsCard({ canUpdate, modelDetails }: Props) {
                   }
                   density="compact"
                   getRowHeight={() => 52}
-                  headerHeight={40}
+                  columnHeaderHeight={40}
                   disableRowSelectionOnClick
                   hideFooter
                   disableColumnMenu
